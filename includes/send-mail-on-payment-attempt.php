@@ -26,7 +26,7 @@ function mfx_mail_team_member_on_bluepay_payment_attempt($order_id, $status) {
         <html>
         <body>
             <h2>Order Payment Notification</h2>
-            <p>The payment for order <strong>#$order_id</strong> associated with billing company <strong>{$billing_company}</strong> was attempted with the following status:</p>
+            <p>The payment for order #<strong> $order_id </strong> associated with billing company <strong>{$billing_company}</strong> was attempted with the following status:</p>
             <p><strong>Payment Status:</strong> " . ucfirst($status) . "</p>
             <p>Currently, the order status in WooCommerce is: <strong>{$current_status_formatted}</strong>.</p>
             <p>Please check the order details in the WooCommerce dashboard for further information.</p>
