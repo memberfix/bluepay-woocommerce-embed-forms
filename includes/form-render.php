@@ -23,14 +23,7 @@ function render_bluepay_form($atts) {
 
     // Get the order total and format it
     $order_total = number_format((float)$order->get_total(), 2, '.', '');
-    $customer_email = $order->get_billing_email();
-    $customer_phone = $order->get_billing_phone();
-    $billing_name = $order->get_billing_first_name() . ' ' . $order->get_billing_last_name();
-    $billing_address = $order->get_billing_address_1();
-    $billing_city = $order->get_billing_city();
-    $billing_state = $order->get_billing_state();
-    $billing_postcode = $order->get_billing_postcode();
-    $billing_country = $order->get_billing_country();
+
 
     $approved_url = esc_url(get_option('bluepay_approved_url', '')) . '?wcorder=' . esc_attr($order_id);
     $declined_url = esc_url(get_option('bluepay_declined_url', '')) . '?wcorder=' . esc_attr($order_id);
@@ -52,7 +45,7 @@ function render_bluepay_form($atts) {
 </form>
 
 
-    <form action="https://secure.bluepay.com/interfaces/bp10emu" method="POST">
+    <form  id="bluepay-payment-form" action="https://secure.bluepay.com/interfaces/bp10emu" method="POST">
 
 
 <input type="hidden" name="MERCHANT" value= "<?php echo $merchant_id; ?>">
@@ -101,7 +94,7 @@ function render_bluepay_form($atts) {
 
 <div class="flex-container">
     <input type="text" id="STATE" name="STATE" placeholder="State / County" required>
-    <input type="text" id="country" name="country" placeholder="Country">
+    <input type="text" id="COUNTRY" name="COUNTRY" placeholder="Country">
 </div>
 
 <!-- Payment Information Section -->
@@ -122,8 +115,8 @@ function render_bluepay_form($atts) {
  <input type="tel" inputmode="numeric" pattern="[0-9\s]{13,19}" autocomplete="cc-number" maxlength="19" placeholder="xxxx xxxx xxxx xxxx"  id="CC_NUM" name="CC_NUM" required>
 
 <div class="flex-container">
-    <input type="text" id="CC_EXPIRES" name="CC_EXPIRES" placeholder="MMYY" required>
-    <input type="text" id="CVCCVV2" name="CVCCVV2" placeholder="CVV" required>
+    <input type="tel" id="CC_EXPIRES" name="CC_EXPIRES" placeholder="MMYY" maxlength="4"required>
+    <input type="tel" id="CVCCVV2" name="CVCCVV2" placeholder="CVV" maxlength="3" required>
 </div>
 
 <input type="submit" value="Make Payment">
@@ -133,3 +126,33 @@ function render_bluepay_form($atts) {
 }
 
 add_shortcode('bluepay_form', 'render_bluepay_form');
+
+function handle_bluepay_ajax_submission() {
+    // Get the order ID
+    $order_id = intval($_POST['CUSTOM_ID']);
+    $order = wc_get_order($order_id);
+
+    if (!$order) {
+        wp_send_json_error(['message' => 'Order not found.']);
+    }
+
+    // Save billing details to the WooCommerce order
+    $order->set_billing_email(sanitize_email($_POST['EMAIL']));
+    $order->set_billing_phone(sanitize_text_field($_POST['PHONE']));
+    $order->set_billing_address_1(sanitize_text_field($_POST['ADDR1']));
+    $order->set_billing_city(sanitize_text_field($_POST['CITY']));
+    $order->set_billing_postcode(sanitize_text_field($_POST['ZIPCODE']));
+    $order->set_billing_state(sanitize_text_field($_POST['STATE']));
+    $order->set_billing_country(sanitize_text_field($_POST['COUNTRY']));
+
+    $full_name = sanitize_text_field($_POST['NAME']);
+    $name_parts = explode(' ', $full_name, 2);
+    $order->set_billing_first_name($name_parts[0] ?? '');
+    $order->set_billing_last_name($name_parts[1] ?? '');
+
+    $order->save();
+
+    wp_send_json_success(['message' => 'Order updated successfully.']);
+}
+add_action('wp_ajax_handle_bluepay_submission', 'handle_bluepay_ajax_submission');
+add_action('wp_ajax_nopriv_handle_bluepay_submission', 'handle_bluepay_ajax_submission');

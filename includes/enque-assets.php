@@ -1,30 +1,42 @@
 <?php 
 
-
-function bluepay_enqueue_assets() {
-    // Enqueue CSS
-    wp_enqueue_style(
-        'bluepay-form-style', 
-        plugin_dir_url(__FILE__) . 'assets/css/form.css',
-        array(), // Dependencies
-        '1.0.0' // Version
-    );
-
-    // Enqueue JS
-    wp_enqueue_script(
-        'bluepay-form-script', 
-        plugin_dir_url(__FILE__) . 'assets/js/cc-number.js',
-        array('jquery'), // Dependencies (requires jQuery)
-        '1.0.0', // Version
-        true // Load script in the footer
-    );
-}
-
-// Conditionally enqueue assets only when the shortcode is used
-function bluepay_enqueue_assets_conditionally($atts) {
-    // Only enqueue when the shortcode [bluepay_form] is detected
+// Conditionally enqueue assets only when the [bluepay_form] shortcode is used
+function bluepay_enqueue_assets_conditionally() {
     if (is_singular() && has_shortcode(get_post()->post_content, 'bluepay_form')) {
-        bluepay_enqueue_assets();
+        // Enqueue CSS
+        wp_enqueue_style(
+            'bluepay-form-style', 
+            plugin_dir_url(__FILE__) . '../assets/css/form.css',
+            array(), // No dependencies
+            '1.0.0' // Version
+        );
+
+        // Enqueue JavaScript for form handling
+        wp_enqueue_script(
+            'bluepay-form-submit', 
+            plugin_dir_url(__FILE__) . '../assets/js/cc-number.js',
+            array('jquery'), // Dependencies (requires jQuery)
+            '1.0.0', // Version
+            true // Load in footer
+        );
+
+        // Enqueue JavaScript for AJAX handling
+        wp_enqueue_script(
+            'bluepay-submit-request-handle', 
+            plugin_dir_url(__FILE__) . '../assets/js/bluepay-ajax.js',
+            array('jquery'), // Dependencies (requires jQuery)
+            '1.0.0', // Version
+            true // Load in footer
+        );
+
+        // Localize script to pass the AJAX URL to the JavaScript
+        wp_localize_script(
+            'bluepay-submit-request-handle', 
+            'bluepayAjax', 
+            array(
+                'ajax_url' => admin_url('admin-ajax.php'), // WordPress AJAX endpoint
+            )
+        );
     }
 }
 add_action('wp_enqueue_scripts', 'bluepay_enqueue_assets_conditionally');
