@@ -23,6 +23,8 @@ function bluepay_register_settings() {
     register_setting('bluepay_settings_group', 'bluepay_declined_url');
     register_setting('bluepay_settings_group', 'bluepay_error_url');
     register_setting('bluepay_settings_group', 'bluepay_mode_variation');
+    register_setting('bluepay_settings_group', 'bluepay_thank_you_page_url');
+    register_setting('bluepay_settings_group', 'bluepay_thank_you_page_additional_details');
 }
 
 
@@ -56,6 +58,14 @@ function render_bluepay_settings_page() {
                 <tr>
                     <th scope="row"><label for="bluepay_error_url">Error URL</label></th>
                     <td><input type="text" name="bluepay_error_url" id="bluepay_error_url" value="<?php echo esc_url(get_option('bluepay_error_url')); ?>" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="bluepay_thank_you_page_url">Order Confirmation Page URL</label></th>
+                    <td><input type="text" name="bluepay_thank_you_page_url" id="bluepay_thank_you_page_url" value="<?php echo esc_url(get_option('bluepay_thank_you_page_url')); ?>" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="bluepay_thank_you_page_additional_details">Order Confirmation Page Additional details</label></th>
+                    <td><input type="text" name="bluepay_thank_you_page_additional_details" id="bluepay_thank_you_page_additional_details" value="<?php echo esc_url(get_option('bluepay_thank_you_page_additional_details')); ?>" class="regular-text"></td>
                 </tr>
                 <tr>
                     <th scope="row"><label for="bluepay_mode_variation">Mode Variation</label></th>

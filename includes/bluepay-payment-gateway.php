@@ -58,35 +58,50 @@ function init_bluepay_mfx_gateway() {
             echo '<div class="bluepay-mfx-container">';
             echo '<p>' . esc_html__('Enter your email to receive the payment details:', 'woocommerce') . '</p>';
             echo '<p><input type="email" id="bluepay_mfx_email" placeholder="Your email address" required></p>';
-			echo '<p><button id="bluepay_mfx_update_order_send_email" class="elementor-button elementor-button-link elementor-size-sm" style="margin-top: 1rem;">' . __('Share Payment Details', 'woocommerce') . '</button></p>';
+            echo '<p><button id="bluepay_mfx_update_order_send_email" class="elementor-button elementor-button-link elementor-size-sm" style="margin-top: 1rem;">' . __('Share Payment Details', 'woocommerce') . '</button></p>';
             ?>
-            <script>
+			            <script>
                 jQuery(document).ready(function($) {
                     $('#bluepay_mfx_update_order_send_email').on('click', function(e) {
                         e.preventDefault();
+        
                         const email = $('#bluepay_mfx_email').val();
-
+                        const button = $(this);
+						const billingemail = $('#billing_email').val();
+        
                         if (!email || !email.includes('@')) {
                             alert('<?php echo esc_js(__('Please enter a valid email address.', 'woocommerce')); ?>');
                             return;
                         }
-
+        
+                        // Show processing message and disable the button
+                        button.text('<?php echo esc_js(__('Processing...', 'woocommerce')); ?>');
+                        button.prop('disabled', true);
+        
                         $.ajax({
                             url: '<?php echo admin_url('admin-ajax.php'); ?>',
                             method: 'POST',
                             data: {
                                 action: 'bluepay_mfx_update_order_send_email',
-                                email: email
+                                email: email,
+								billingemail: billingemail
                             },
                             success: function(response) {
                                 if (response.success) {
+                                    // Redirect the user on success
                                     window.location.href = response.data.redirect_url;
                                 } else {
                                     alert(response.data.message || '<?php echo esc_js(__('An error occurred. Please try again.', 'woocommerce')); ?>');
+                                    // Re-enable the button on error
+                                    button.text('<?php echo esc_js(__('Share Payment Details', 'woocommerce')); ?>');
+                                    button.prop('disabled', false);
                                 }
                             },
                             error: function() {
                                 alert('<?php echo esc_js(__('An error occurred. Please try again.', 'woocommerce')); ?>');
+                                // Re-enable the button on error
+                                button.text('<?php echo esc_js(__('Share Payment Details', 'woocommerce')); ?>');
+                                button.prop('disabled', false);
                             }
                         });
                     });
@@ -95,6 +110,7 @@ function init_bluepay_mfx_gateway() {
             <?php
             echo '</div>';
         }
+        
     }
 }
 
@@ -116,6 +132,7 @@ function bluepay_mfx_update_order_send_email() {
         }
 
         $email = sanitize_email($_POST['email']);
+		$billingemail = sanitize_email($_POST['billingemail']);
         error_log('[Bluepay MFX] Sanitized email: ' . $email);
 
         // Validate cart contents.
@@ -137,6 +154,26 @@ function bluepay_mfx_update_order_send_email() {
         // Calculate order totals.
         $order->calculate_totals();
         error_log('[Bluepay MFX] Order totals calculated.');
+
+        // Create or fetch the customer ID using the provided email
+        if ($billingemail) {
+            $user = get_user_by('email', $billingemail);
+            if ($user) {
+                $customer_id = $user->ID; // Existing user
+            } else {
+                // Create a new user for the email
+                $password = wp_generate_password(); // Generate a random password
+                $customer_id = wp_create_user($billingemail, $password, $billingemail);
+                if (is_wp_error($customer_id)) {
+                    wp_send_json_error(['message' => __('Unable to create customer account.', 'woocommerce')]);
+                }
+            }
+
+            // Assign the customer ID to the order
+            $order->set_customer_id($customer_id);
+		}
+		
+            $order->save();
 
         // Generate the payment link.
         $payment_link = site_url("/form-bluepay?order_id={$order->get_id()}");
@@ -163,8 +200,29 @@ function bluepay_mfx_update_order_send_email() {
         error_log('[Bluepay MFX] Cart emptied.');
 
         // Redirect to the thank-you page.
-        $thank_you_url = $order->get_checkout_order_received_url();
-        wp_send_json_success(['redirect_url' => $thank_you_url]);
+        // Redirect to the thank-you page with order_id and email as URL parameters.
+        $base_url = get_option('bluepay_thank_you_page_url', '');
+
+        if (empty($base_url)) {
+            error_log('[Bluepay MFX] Thank you page URL is not set.');
+            wp_send_json_error(['message' => __('Thank you page URL is not configured.', 'woocommerce')]);
+        }
+
+        // Add query arguments for order ID and email
+        $bluepay_thank_you_page_url = esc_url_raw(
+            add_query_arg(
+                [
+                    'order_id' => $order->get_id(),
+                    'sent_to'  => $email 
+                ],
+                $base_url // Ensure the base URL is sanitized
+            )
+        );
+        
+        // Send the response with the redirect URL
+        wp_send_json_success(['redirect_url' => $bluepay_thank_you_page_url]);
+        
+
 
     } catch (Exception $e) {
         error_log('[Bluepay MFX] Exception occurred: ' . $e->getMessage());

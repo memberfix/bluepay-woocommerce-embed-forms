@@ -1,6 +1,14 @@
 <?php 
 
 function render_bluepay_form($atts) {
+
+    $default_atts = array(
+        'transaction_type' => 'SALE', // Default to SALE
+    );
+
+    // Merge user-defined attributes with defaults
+    $atts = shortcode_atts($default_atts, $atts, 'bluepay_form');
+
     // Get the order ID from the URL parameter
     $order_id = isset($_GET['order_id']) ? intval($_GET['order_id']) : null;
 
@@ -49,7 +57,7 @@ function render_bluepay_form($atts) {
 
 
 <input type="hidden" name="MERCHANT" value= "<?php echo $merchant_id; ?>">
-<input type="hidden" name="TRANSACTION_TYPE" value="SALE">
+<input type="hidden" name="TRANSACTION_TYPE" value="<?php echo esc_attr($atts['transaction_type']); ?>">
 <input type="hidden" name="TAMPER_PROOF_SEAL" value= "<?php echo $tamper_proof_seal; ?>">
 <input type="hidden" name="APPROVED_URL" value="<?php echo $approved_url; ?>">
 <input type="hidden" name="DECLINED_URL" value="<?php echo $declined_url; ?>">
