@@ -23,8 +23,11 @@ function bluepay_register_settings() {
     register_setting('bluepay_settings_group', 'bluepay_declined_url');
     register_setting('bluepay_settings_group', 'bluepay_error_url');
     register_setting('bluepay_settings_group', 'bluepay_mode_variation');
-    register_setting('bluepay_settings_group', 'bluepay_thank_you_page_url');
-    register_setting('bluepay_settings_group', 'bluepay_thank_you_page_additional_details');
+    register_setting('bluepay_settings_group', 'bluepay_confirmed_order_page_url');
+    register_setting('bluepay_settings_group', 'bluepay_confirmed_order_page_additional_details');
+    register_setting('bluepay_settings_group', 'bluepay_sent_to_email_subject');
+    register_setting('bluepay_settings_group', 'bluepay_sent_to_email_body');
+
 }
 
 
@@ -59,14 +62,19 @@ function render_bluepay_settings_page() {
                     <th scope="row"><label for="bluepay_error_url">Error URL</label></th>
                     <td><input type="text" name="bluepay_error_url" id="bluepay_error_url" value="<?php echo esc_url(get_option('bluepay_error_url')); ?>" class="regular-text"></td>
                 </tr>
+
                 <tr>
-                    <th scope="row"><label for="bluepay_thank_you_page_url">Order Confirmation Page URL</label></th>
-                    <td><input type="text" name="bluepay_thank_you_page_url" id="bluepay_thank_you_page_url" value="<?php echo esc_url(get_option('bluepay_thank_you_page_url')); ?>" class="regular-text"></td>
+                    <th scope="row"><label for="bluepay_confirmed_order_page_url">Order Confirmation Page URL</label></th>
+                    <td><input type="text" name="bluepay_confirmed_order_page_url" id="bluepay_confirmed_order_page_url" value="<?php echo esc_url(get_option('bluepay_confirmed_order_page_url')); ?>" class="regular-text"></td>
                 </tr>
                 <tr>
-                    <th scope="row"><label for="bluepay_thank_you_page_additional_details">Order Confirmation Page Additional details</label></th>
-                    <td><input type="text" name="bluepay_thank_you_page_additional_details" id="bluepay_thank_you_page_additional_details" value="<?php echo esc_url(get_option('bluepay_thank_you_page_additional_details')); ?>" class="regular-text"></td>
+                    <th scope="row"><label for="bluepay_confirmed_order_page_additional_details">Order Confirmation Page Additional details</label></th>
+                    <td>
+                    <textarea name="bluepay_confirmed_order_page_additional_details" id="bluepay_confirmed_order_page_additional_details" rows="5" class="large-text"><?php echo esc_textarea(get_option('bluepay_confirmed_order_page_additional_details')); ?></textarea>
+                    </td>
                 </tr>
+                <hr>
+
                 <tr>
                     <th scope="row"><label for="bluepay_mode_variation">Mode Variation</label></th>
                     <td>
@@ -76,7 +84,22 @@ function render_bluepay_settings_page() {
                         </select>
                     </td>
                 </tr>
+                <hr>
+                <tr>
+                    <th scope="row"><label for="bluepay_sent_to_email_subject">Sent to email Subject</label></th>
+                    <td><input type="text" name="bluepay_sent_to_email_subject" id="bluepay_sent_to_email_subject" value="<?php echo esc_attr(get_option('bluepay_sent_to_email_subject')); ?>" class="regular-text"></td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><label for="bluepay_sent_to_email_body">Sent to Email Body</label></th>
+                    <td>
+                        <textarea name="bluepay_sent_to_email_body" id="bluepay_sent_to_email_body" rows="5" class="large-text"><?php echo esc_textarea(get_option('bluepay_sent_to_email_body')); ?></textarea>
+                    </td>
+                </tr>
+
+
             </table>
+
             <?php submit_button(); ?>
         </form>
     </div>

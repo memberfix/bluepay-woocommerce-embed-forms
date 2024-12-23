@@ -175,18 +175,29 @@ function bluepay_mfx_update_order_send_email() {
 		
             $order->save();
 
+        $base_url = get_option('bluepay_confirmed_order_page_url', '');
         // Generate the payment link.
-        $payment_link = site_url("/form-bluepay?order_id={$order->get_id()}");
+        $payment_link = esc_url("{$base_url}?order_id={$order->get_id()}");
         error_log('[Bluepay MFX] Payment link generated: ' . $payment_link);
 
-        // Send payment link via email.
-        $subject = __('Bluepay Payment Details', 'woocommerce');
+
+        $sent_to_subject = get_option('bluepay_sent_to_email_subject', '');
+        $sent_to_body = get_option('bluepay_sent_to_email_body', '');
+
+        // Use provided subject or fallback to a default.
+        $subject = !empty($sent_to_subject) ? $sent_to_subject : __('TechServe Payment Details', 'woocommerce');
+
+        // Use provided body or fallback to a default with the payment link.
+        $message_body = !empty($sent_to_body) ? $sent_to_body : __('Kindly Complete the Payment.', 'woocommerce');
         $message = sprintf(
-            __('Please complete your payment using the following link: <a href="%s">%s</a>', 'woocommerce'),
+            '%s<br><br>Payment Link: <a href="%s">%s</a>',
+            $message_body,
             esc_url($payment_link),
             esc_html($payment_link)
         );
+        // Define headers for HTML emails.
         $headers = ['Content-Type: text/html; charset=UTF-8'];
+
 
         if (!wp_mail($email, $subject, $message, $headers)) {
             error_log('[Bluepay MFX] Failed to send email to: ' . $email);
@@ -199,9 +210,9 @@ function bluepay_mfx_update_order_send_email() {
         WC()->cart->empty_cart();
         error_log('[Bluepay MFX] Cart emptied.');
 
-        // Redirect to the thank-you page.
+    
         // Redirect to the thank-you page with order_id and email as URL parameters.
-        $base_url = get_option('bluepay_thank_you_page_url', '');
+    
 
         if (empty($base_url)) {
             error_log('[Bluepay MFX] Thank you page URL is not set.');
@@ -209,7 +220,7 @@ function bluepay_mfx_update_order_send_email() {
         }
 
         // Add query arguments for order ID and email
-        $bluepay_thank_you_page_url = esc_url_raw(
+        $bluepay_confirmed_order_page_url = esc_url_raw(
             add_query_arg(
                 [
                     'order_id' => $order->get_id(),
@@ -220,7 +231,7 @@ function bluepay_mfx_update_order_send_email() {
         );
         
         // Send the response with the redirect URL
-        wp_send_json_success(['redirect_url' => $bluepay_thank_you_page_url]);
+        wp_send_json_success(['redirect_url' => $bluepay_confirmed_order_page_url]);
         
 
 
