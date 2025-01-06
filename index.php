@@ -3,7 +3,7 @@
  * Plugin Name: BluePay Woocommerce Embed Forms
  * Plugin URI: https://memberfix.rocks
  * Description: Embed forms. Changing order status
- * Version: 1.0.8
+ * Version: 1.0.1
  * Author: Denys Melnychuk
  * Author URI: https://memberfix.rocks
  * License: GPL2
