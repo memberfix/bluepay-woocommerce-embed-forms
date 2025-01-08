@@ -5,8 +5,6 @@ function bluepay_mfx_send_shareble_link ($order_id, $email, $billingemail) {
     $base_url = get_option('bluepay_confirmed_order_page_url', '');
     // Generate the payment link.
     $payment_link = esc_url("{$base_url}?order_id={$order_id}");
-
-
     $sent_to_subject = get_option('bluepay_sent_to_email_subject', '');
     $sent_to_body = get_option('bluepay_sent_to_email_body', '');
 
@@ -23,7 +21,6 @@ function bluepay_mfx_send_shareble_link ($order_id, $email, $billingemail) {
     );
     // Define headers for HTML emails.
     $headers = ['Content-Type: text/html; charset=UTF-8'];
-
 
     if (!wp_mail($email, $subject, $message, $headers)) {
         wp_send_json_error(['message' => __('Failed to send email. Please try again.', 'woocommerce')]);
