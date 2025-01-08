@@ -28,7 +28,4 @@ function generate_bluepay_form_pay_now_link() {
 // Register the shortcode to generate the BluePay link
 add_shortcode('bluepay_link', 'generate_bluepay_form_pay_now_link');
 
-// Usage example in WebToffee PDF Invoice template
-// Add [bluepay_link] in your WebToffee template editor.
-
 ?>
