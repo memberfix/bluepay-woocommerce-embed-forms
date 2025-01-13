@@ -1,7 +1,7 @@
 <?php
 require_once plugin_dir_path( __FILE__ ) . 'order-status-complete.php';
 require_once plugin_dir_path( __FILE__ ) . 'send-mail-on-payment-attempt.php';
-
+require_once plugin_dir_path( __FILE__ ) . 'bluepay-settings-page.php';
 
 function bluepay_response_result_shortcode() {
     // Parse the URL query parameters
@@ -9,6 +9,10 @@ function bluepay_response_result_shortcode() {
     $wcorder = isset($_GET['wcorder']) ? sanitize_text_field($_GET['wcorder']) : 'N/A';
     $invoice_id = isset($_GET['INVOICE_ID']) ? sanitize_text_field($_GET['INVOICE_ID']) : 'N/A';
     $message = isset($_GET['MESSAGE']) ? sanitize_text_field($_GET['MESSAGE']) : 'N/A';
+    $order_id = isset($_GET['ORDER_ID']) ? sanitize_text_field($_GET['ORDER_ID']) : 'N/A';
+    
+    $base_url = get_option('bluepay_confirmed_order_page_url', '');
+    
     // Check if the status is APPROVED
     if ($status !== 'APPROVED') {
         $invoice_id = ''; // Hide the Invoice ID if the status is not APPROVED
@@ -22,12 +26,23 @@ function bluepay_response_result_shortcode() {
     ob_start();
     ?>
     <form>
-        <h2><span id="result"><?php echo esc_html($status); ?></span></h2>
+        <?php 
+        if ($status === 'APPROVED') { 
+            echo '<h2><span id="result">SUCCESS</span></h2>'; 
+        } else { 
+            echo '<h2><span id="result">' . esc_html($status) . '</span></h2>'; 
+        }
+        ?>
         <h3>Order Number: <span id="wcorder"><?php echo esc_html($wcorder); ?></span></h3>
         <?php if ($status === 'APPROVED') : ?>
             <h4>Transaction ID: <span id="invoice"><?php echo esc_html($invoice_id); ?></span></h4>
         <?php endif; ?>
         <h4 style="color: #F98200 !important;"><span id="message"><?php echo esc_html($status); ?></span></h4>
+        <?php if ($status !== 'APPROVED') : ?>
+            <a href="<?php echo $base_url . "?order_id=" . $order_id; ?>" style="margin-top:2rem;" class="elementor-button elementor-button-link elementor-size-sm">
+                Try again
+            </a>
+        <?php endif; ?>
     </form>
     <?php
     return ob_get_clean();
