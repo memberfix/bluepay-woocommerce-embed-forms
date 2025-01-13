@@ -84,6 +84,45 @@ function bluepay_gateway_order_confirmation_shortcode() {
             font-size: 10px;
             color: #666;
         }
+
+	.payment-link-wrapper {
+            margin: 1rem 0;
+        }
+        .payment-link-copy-block {
+            width: 100%;
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.8rem;
+            position: relative;
+        }
+        .payment-link {
+            padding: 0.4rem 0.8rem;
+            border-radius: 10px;
+            background: #efefef;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+        }
+        .payment-link-copy-msg {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: #059B95;
+            color: #fff;
+            font-size: 14px;
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 5px;
+            opacity: 0;
+            z-index: -3;
+            transition: all ease 0.4s;
+        }
+        .payment-link-copy-msg.active {
+            z-index: 24;
+            opacity: 1;
+            top: -2rem;
+        }
     </style>
     <?php
 
@@ -139,6 +178,40 @@ function bluepay_gateway_order_confirmation_shortcode() {
                         Pay Now with Credit Card
                     </a>
             </div>
+	<div class="payment-link-wrapper">
+            <p>Or copy the payment link:</p>
+            <div class="payment-link-copy-block">
+                <div class="payment-link" id="payment_link_string">
+                    <?php echo $_SERVER['HTTP_HOST']; ?>
+                    /form-bluepay?order_id=
+                    <?php echo esc_attr($order_id); ?>
+                </div>
+                <button id="payment_link_copy_btn" class="elementor-button elementor-button-link elementor-size-sm"
+                    title="Click to copy the payment link">
+                    Copy Link
+                </button>
+                <div class="payment-link-copy-msg" id="payment_link_copy_msg">
+                    Link copied
+                </div>
+            </div>
+        </div>
+        <script>
+            var payment_link_string = document.querySelector('#payment_link_string');
+            var payment_link_copy_btn = document.querySelector('#payment_link_copy_btn');
+            var payment_link_copy_msg = document.querySelector('#payment_link_copy_msg');
+
+            payment_link_copy_btn.addEventListener('click', function () {
+                var content = payment_link_string.innerText;
+                navigator.clipboard.writeText(content).then(function () {
+                    payment_link_copy_msg.classList.add('active');
+                    setTimeout(() => {
+                        payment_link_copy_msg.classList.remove('active');
+                    }, 2000);
+                }, function (err) {
+                    console.error('Error copying text: ', err);
+                });
+            });
+        </script>
 
         <br>
         <br>
