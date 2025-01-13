@@ -27,7 +27,7 @@ function bluepay_response_result_shortcode() {
         <?php if ($status === 'APPROVED') : ?>
             <h4>Transaction ID: <span id="invoice"><?php echo esc_html($invoice_id); ?></span></h4>
         <?php endif; ?>
-        <h4 style="color: #F98200 !important;"><span id="message"><?php echo esc_html($message); ?></span></h4>
+        <h4 style="color: #F98200 !important;"><span id="message"><?php echo esc_html($status); ?></span></h4>
     </form>
     <?php
     return ob_get_clean();
