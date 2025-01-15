@@ -182,9 +182,7 @@ function bluepay_gateway_order_confirmation_shortcode() {
             <p>Or copy the payment link:</p>
             <div class="payment-link-copy-block">
                 <div class="payment-link" id="payment_link_string">
-                    <?php echo $_SERVER['HTTP_HOST']; ?>
-                    /form-bluepay?order_id=
-                    <?php echo esc_attr($order_id); ?>
+                    <?php echo $_SERVER['HTTP_HOST']; ?>/form-bluepay?order_id=<?php echo esc_attr($order_id); ?>
                 </div>
                 <button id="payment_link_copy_btn" class="elementor-button elementor-button-link elementor-size-sm"
                     title="Click to copy the payment link">
