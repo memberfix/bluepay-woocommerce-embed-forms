@@ -20,11 +20,12 @@ function bluepay_enqueue_assets_conditionally() {
             true // Load in footer
         );
 
-        // Enqueue JavaScript for AJAX handling
+
+        // Enqueue JavaScript for dropdowns and date mask
         wp_enqueue_script(
             'bluepay-submit-request-handle', 
-            plugin_dir_url(__FILE__) . '../assets/js/bluepay-ajax.js',
-            array('jquery'), // Dependencies (requires jQuery)
+            plugin_dir_url(__FILE__) . '../assets/js/date-input-mask.js',
+            array(), // No Dependencies
             '1.0.0', // Version
             true // Load in footer
         );
