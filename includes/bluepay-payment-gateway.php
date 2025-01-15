@@ -75,20 +75,56 @@ function bluepay_mfx_payment_gateway_init() {
             echo '<input type="hidden" id="bluepay_mfx_hidden_email" name="bluepay_mfx_hidden_email" value="">';
             echo '<p><button id="bluepay_mfx_share_button" class="elementor-button elementor-button-link elementor-size-sm" style="margin-top: 1rem;">' . __('Share Payment Details', 'woocommerce') . '</button></p>';
             ?>
+                <script>
+                    jQuery(document).ready(function ($) {
+                        $('#bluepay_mfx_share_button').on('click', function (e) {
+                            e.preventDefault();
+                            
+                            const email = $('#bluepay_mfx_share_to_email').val();
+                            const button = $(this);
+                            
+                            if (email) {
+                                $('#bluepay_mfx_hidden_email').val(email);
+                            }
+
+                            // Disable the button and show a processing message
+                            button.prop('disabled', true).text('Processing...');
+
+                            // Trigger WooCommerce checkout
+                            $('#place_order').click();
+
+                            // Re-enable the button and reset text if an error occurs
+                            $(document.body).on('checkout_error', function () {
+                                button.prop('disabled', false).text('<?php echo esc_js(__('Share Payment Details', 'woocommerce')); ?>');
+                            });
+                        });
+                    });
+                </script>
+
             <script>
                 jQuery(document).ready(function ($) {
-                    $('#bluepay_mfx_share_button').on('click', function (e) {
-                        e.preventDefault();
-                        const email = $('#bluepay_mfx_share_to_email').val();
-                        if (email) {
-                            $('#bluepay_mfx_hidden_email').val(email);
+                    function togglePlaceOrderButton() {
+                        const selectedGateway = $('input[name="payment_method"]:checked').val();
+                        const placeOrderWrap = $('.wfacp-order-place-btn-wrap');
+
+                        if (selectedGateway === 'bluepay_mfx') {
+                            placeOrderWrap.hide(); // Hide the Place Order button
+                        } else {
+                            placeOrderWrap.show(); // Show the Place Order button
                         }
-                        $(this).prop('disabled', true).text('Processing...');
-                        
-                        $('#place_order').click(); // Trigger WooCommerce checkout
+                    }
+
+                    // Run on page load
+                    togglePlaceOrderButton();
+
+                    // Attach event listener to payment method change
+                    $('input[name="payment_method"]').on('change', function () {
+                        togglePlaceOrderButton();
                     });
                 });
             </script>
+
+
             <?php
         }
 
