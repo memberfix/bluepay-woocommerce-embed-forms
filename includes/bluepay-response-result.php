@@ -9,7 +9,7 @@ function bluepay_response_result_shortcode() {
     $wcorder = isset($_GET['wcorder']) ? sanitize_text_field($_GET['wcorder']) : 'N/A';
     $invoice_id = isset($_GET['INVOICE_ID']) ? sanitize_text_field($_GET['INVOICE_ID']) : 'N/A';
     $message = isset($_GET['MESSAGE']) ? sanitize_text_field($_GET['MESSAGE']) : 'N/A';
-    $order_id = isset($_GET['ORDER_ID']) ? sanitize_text_field($_GET['ORDER_ID']) : 'N/A'; // Added $order_id variable
+    $order_id = isset($_GET['wcorder']) ? sanitize_text_field($_GET['wcorder']) : 'N/A'; // Added $order_id variable
     
     $base_url = get_option('bluepay_confirmed_order_page_url', ''); // Added $base_url variable
     
