@@ -83,6 +83,8 @@ function bluepay_mfx_payment_gateway_init() {
                         if (email) {
                             $('#bluepay_mfx_hidden_email').val(email);
                         }
+                        $(this).prop('disabled', true).text('Processing...');
+                        
                         $('#place_order').click(); // Trigger WooCommerce checkout
                     });
                 });

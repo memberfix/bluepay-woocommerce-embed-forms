@@ -19,5 +19,21 @@ function mfx_update_order_status_and_txn_id($order_id, $txn_id) {
         // Save the order
         $order->save();
     }
+    if (wcs_order_contains_subscription($order)) {
+        // Get the subscriptions linked to the order
+        $subscriptions = wcs_get_subscriptions_for_order($order_id, array('order_type' => 'any'));
+
+        // Loop through each subscription
+        foreach ($subscriptions as $subscription) {
+            // Update payment method, title, and transaction ID for the subscription
+            $subscription->set_payment_method('bluepay');
+            $subscription->set_payment_method_title('Credit Card (BluePay)');
+            $subscription->add_meta_data('_bluepay_card_id', $txn_id);
+            $subscription->add_meta_data('_bluepay_customer_id', $txn_id);
+    
+            // Save the subscription
+            $subscription->save();
+        }
+    }
 }
 
