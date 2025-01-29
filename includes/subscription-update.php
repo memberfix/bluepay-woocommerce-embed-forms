@@ -212,39 +212,94 @@ function mfx_update_failed_order_items($order, $selected_variations, $team_data)
 
 function mfx_update_subscription_recurring_period($subscription, $selected_plan) {
     try {
+        error_log("Starting subscription period update with plan: " . print_r($selected_plan, true));
+        
+        // Convert plan to lowercase and trim for consistency
+        $selected_plan = strtolower(trim($selected_plan));
+        
         $period_mapping = array(
             'monthly' => array('interval' => 1, 'period' => 'month'),
             'quarterly' => array('interval' => 3, 'period' => 'month'),
-            'annual' => array('interval' => 12, 'period' => 'month')
+            'annual' => array('interval' => 12, 'period' => 'month'),
+            'quarter' => array('interval' => 3, 'period' => 'month'),
+            '3month' => array('interval' => 3, 'period' => 'month'),
+            '3months' => array('interval' => 3, 'period' => 'month'),
+            '3-month' => array('interval' => 3, 'period' => 'month'),
+            '3-months' => array('interval' => 3, 'period' => 'month')
         );
         
-        if (isset($period_mapping[$selected_plan])) {
-            $new_interval = $period_mapping[$selected_plan]['interval'];
-            $new_period = $period_mapping[$selected_plan]['period'];
+        error_log("Available period mappings: " . print_r(array_keys($period_mapping), true));
+        
+        if (!isset($period_mapping[$selected_plan])) {
+            $error_message = "Invalid subscription plan selected: '$selected_plan'. Available plans: " . implode(', ', array_keys($period_mapping));
+            error_log($error_message);
+            return new WP_Error('invalid_plan', $error_message);
+        }
+        
+        $new_interval = $period_mapping[$selected_plan]['interval'];
+        $new_period = $period_mapping[$selected_plan]['period'];
+        
+        error_log("Setting new interval to: $new_interval and period to: $new_period");
+        
+        try {
+            // First set the billing period and interval
+            $subscription->set_billing_interval($new_interval);
+            error_log("Successfully set billing interval to: $new_interval");
             
-            $subscription->update_dates(array(
-                'next_payment' => WC_Subscriptions_Product::get_expiration_date(
-                    $subscription->get_date('last_payment'),
+            $subscription->set_billing_period($new_period);
+            error_log("Successfully set billing period to: $new_period");
+            
+            // Get the last payment date
+            $last_payment = $subscription->get_date('last_payment');
+            if (!$last_payment) {
+                $last_payment = $subscription->get_date('start');
+                error_log("No last payment date found, using start date: $last_payment");
+            }
+            
+            if ($last_payment) {
+                // Calculate next payment date
+                $next_payment = WC_Subscriptions_Product::get_expiration_date(
+                    $last_payment,
                     array(
                         'subscription_interval' => $new_interval,
                         'subscription_period' => $new_period
                     )
-                )
-            ));
+                );
+                
+                error_log("Calculated next payment date: $next_payment from last payment: $last_payment");
+                
+                // Update the next payment date
+                $subscription->update_dates(array(
+                    'next_payment' => $next_payment
+                ));
+                error_log("Successfully updated next payment date to: $next_payment");
+            } else {
+                error_log("Warning: Could not find last payment or start date");
+            }
             
-            $subscription->set_billing_interval($new_interval);
-            $subscription->set_billing_period($new_period);
+            // Save all changes
             $subscription->save();
+            error_log("Successfully saved subscription changes");
             
-            error_log("Updated subscription period - Plan: $selected_plan, Interval: $new_interval, Period: $new_period");
+            // Verify the changes
+            $saved_interval = $subscription->get_billing_interval();
+            $saved_period = $subscription->get_billing_period();
+            $saved_next_payment = $subscription->get_date('next_payment');
+            
+            error_log("Verification - Saved values: interval=$saved_interval, period=$saved_period, next_payment=$saved_next_payment");
+            
+            if ($saved_interval != $new_interval || $saved_period != $new_period) {
+                throw new Exception("Verification failed - saved values don't match expected values");
+            }
+            
             return true;
-        } else {
-            error_log("Invalid plan selected: $selected_plan");
-            return new WP_Error('invalid_plan', 'Invalid subscription plan selected');
+        } catch (Exception $e) {
+            throw new Exception("Failed to update subscription: " . $e->getMessage());
         }
     } catch (Exception $e) {
-        error_log('Error updating subscription period: ' . $e->getMessage());
-        return new WP_Error('update_error', $e->getMessage());
+        $error_message = 'Error updating subscription period: ' . $e->getMessage();
+        error_log($error_message);
+        return new WP_Error('update_error', $error_message);
     }
 }
 
