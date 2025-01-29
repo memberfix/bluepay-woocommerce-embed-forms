@@ -15,6 +15,39 @@ function bluepay_settings_menu() {
 }
 
 
+// Get available product attributes
+function get_available_product_attributes() {
+    global $wpdb;
+    $attribute_options = array();
+    
+    // Get global product attributes
+    $attributes = wc_get_attribute_taxonomies();
+    foreach ($attributes as $attribute) {
+        $attribute_options[$attribute->attribute_name] = $attribute->attribute_label;
+    }
+    
+    // Get variation attributes from postmeta
+    $variation_attributes = $wpdb->get_col(
+        "SELECT DISTINCT meta_key 
+        FROM {$wpdb->postmeta} pm
+        JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+        WHERE p.post_type = 'product_variation'
+        AND meta_key LIKE 'attribute_%'
+        AND meta_key NOT LIKE 'attribute_pa_%'"
+    );
+    
+    foreach ($variation_attributes as $attr) {
+        $attr_name = str_replace('attribute_', '', $attr);
+        if (!isset($attribute_options[$attr_name])) {
+            // Convert attribute name to label (e.g., 'plan' becomes 'Plan')
+            $attr_label = ucfirst(str_replace('-', ' ', $attr_name));
+            $attribute_options[$attr_name] = $attr_label;
+        }
+    }
+    
+    return $attribute_options;
+}
+
 // Register settings
 function bluepay_register_settings() {
     register_setting('bluepay_settings_group', 'bluepay_merchant_id');
@@ -27,7 +60,6 @@ function bluepay_register_settings() {
     register_setting('bluepay_settings_group', 'bluepay_confirmed_order_page_additional_details');
     register_setting('bluepay_settings_group', 'bluepay_sent_to_email_subject');
     register_setting('bluepay_settings_group', 'bluepay_sent_to_email_body');
-
 }
 
 
@@ -84,7 +116,6 @@ function render_bluepay_settings_page() {
                         </select>
                     </td>
                 </tr>
-                <hr>
                 <tr>
                     <th scope="row"><label for="bluepay_sent_to_email_subject">Sent to email Subject</label></th>
                     <td><input type="text" name="bluepay_sent_to_email_subject" id="bluepay_sent_to_email_subject" value="<?php echo esc_attr(get_option('bluepay_sent_to_email_subject')); ?>" class="regular-text"></td>

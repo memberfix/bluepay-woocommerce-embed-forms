@@ -3,6 +3,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once plugin_dir_path( __FILE__ ) . 'subscription-update.php';
+
 // Register shortcode and necessary actions
 add_shortcode('product_filter', 'render_product_filter');
 add_action('wp_enqueue_scripts', 'product_filter_scripts');
@@ -31,16 +33,22 @@ function render_product_filter() {
         'attribute_plan'
     ));
     
-    // Get unique values for annual revenue attribute
+    // Get unique values for annual revenue attribute (only from membership product)
     $revenue_values = $wpdb->get_col($wpdb->prepare(
         "SELECT DISTINCT pm1.meta_value 
         FROM {$wpdb->postmeta} pm1
         JOIN {$wpdb->postmeta} pm2 ON pm1.post_id = pm2.post_id
         WHERE pm1.meta_key = %s 
         AND pm1.meta_value != ''
-        AND pm2.meta_key = 'attribute_available-for-renewal'
-        AND pm2.meta_value = 'Yes'",
-        'attribute_annual-revenue'
+        AND pm2.meta_key = 'attribute_renewal'
+        AND pm2.meta_value = 'Yes'
+        AND pm1.post_id IN (
+            SELECT ID 
+            FROM {$wpdb->posts} 
+            WHERE post_parent = %d
+        )",
+        'attribute_annual-revenue',
+        12350 // Membership product ID
     ));
     
     // Get unique values for available-for-renewal attribute
@@ -49,44 +57,65 @@ function render_product_filter() {
         FROM {$wpdb->postmeta} 
         WHERE meta_key = %s 
         AND meta_value != ''",
-        'attribute_available-for-renewal'
+        'attribute_renewal'
     ));
     
     ob_start();
     ?>
     <div class="product-filter-container">
+        <?php if (function_exists('wcs_get_users_subscriptions')): ?>
+            <!-- Current Subscription Details -->
+            <div class="current-subscription-details">
+                <h3>Current Subscription Details</h3>
+                <?php
+                $current_user_id = get_current_user_id();
+                $subscriptions = wcs_get_users_subscriptions($current_user_id);
+                if (!empty($subscriptions)): 
+                    foreach ($subscriptions as $subscription): ?>
+                        <div class="subscription-info">
+                            <h5>Subscription #<?php echo esc_html($subscription->get_id()); ?></h4>
+                            <?php foreach ($subscription->get_items() as $item): ?>
+                                <div class="item-info">
+                                    <strong><?php echo esc_html($item->get_name()); ?></strong>
+                                    <?php 
+                                    foreach ($item->get_formatted_meta_data() as $meta): ?>
+                                        <p><<?php echo esc_html($meta->display_key); ?>: 
+                                           <?php echo wp_kses_post($meta->display_value); ?></p>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endforeach;
+                else: ?>
+                    <p>No active subscriptions found.</p>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
         <!-- Section 1: Filters -->
         <div class="filter-section">
-            <h3>Select Your Plan Details</h3>
+            <h3>Subscription Update</h3>
             <div class="filter-group">
                 <h4>Select Plan</h4>
                 <div class="radio-group" id="plan-filters">
-                    <ul>
                     <?php foreach ($plan_values as $plan) : ?>
-                       <li> 
                         <label>
                             <input type="radio" name="plan" value="<?php echo esc_attr($plan); ?>">
                             <?php echo esc_html($plan); ?>
                         </label>
-                        </li>
                     <?php endforeach; ?>
-                    </ul>
                 </div>
             </div>
             
             <div class="filter-group">
                 <h4>Select Annual Revenue</h4>
                 <div class="radio-group" id="revenue-filters">
-                    <ul>
                     <?php foreach ($revenue_values as $revenue) : ?>
-                        <li>
                         <label>
                             <input type="radio" name="revenue" value="<?php echo esc_attr($revenue); ?>">
                             <?php echo esc_html($revenue); ?>
                         </label>
-                        </li>
                     <?php endforeach; ?>
-                    </ul>
                 </div>
             </div>
         </div>
@@ -110,14 +139,25 @@ function render_product_filter() {
         </div>
     </div>
     <div class="total-container">
-        <div class="total-content">
-            <span>Total:</span>
-            <span class="total-amount">$0.00</span>
+        <div class="selected-products-summary">
+            <div class="total-section">
+                <h4>Total</h4>
+                <div class="total-amount">$<span id="total-price">0.00</span></div>
+                <?php if (function_exists('wcs_get_users_subscriptions')): 
+                    $current_user_id = get_current_user_id();
+                    $subscriptions = wcs_get_users_subscriptions($current_user_id);
+                    if (!empty($subscriptions)): 
+                        foreach ($subscriptions as $subscription): ?>
+                            <input type="hidden" id="subscription_id" value="<?php echo esc_attr($subscription->get_id()); ?>">
+                            <?php break; // Only get the first subscription
+                        endforeach;
+                    endif;
+                endif; ?>
+                <div class="update-subscription-button-container">
+                    <button id="update-subscription-btn" class="button alt">Update Subscription</button>
+                </div>
+            </div>
         </div>
-    </div>
-    <div class="debug-container" style="margin-top: 20px; padding: 20px; background: #f5f5f5; border: 1px solid #ddd;">
-        <h4>Selected Product IDs:</h4>
-        <div class="selected-products"></div>
     </div>
     <?php
     return ob_get_clean();
@@ -145,7 +185,7 @@ function handle_product_filter() {
             'meta_query' => array(
                 'relation' => 'AND',
                 array(
-                    'key' => 'attribute_available-for-renewal',
+                    'key' => 'attribute_renewal',
                     'value' => 'Yes',
                     'compare' => '='
                 )

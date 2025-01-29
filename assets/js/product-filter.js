@@ -1,76 +1,123 @@
 jQuery(document).ready(function($) {
-    function updateSelectedProducts() {
-        let selectedProducts = [];
-        $('input[type="checkbox"]:checked').each(function() {
-            let id = $(this).val();
-            let name = $(this).siblings('.variation-details').find('.name').text();
-            selectedProducts.push(`${name} (ID: ${id})`);
-        });
-        $('.selected-products').html(selectedProducts.join('<br>'));
-    }
-
-    function updateTotal() {
-        let total = 0;
-        // Always include checked checkboxes (including membership which is locked as checked)
-        $('input[type="checkbox"]:checked').each(function() {
-            total += parseFloat($(this).data('price')) || 0;
-        });
-        $('.total-amount').text('$' + total.toFixed(2));
-        // Update selected products display
-        updateSelectedProducts();
+    function checkAndShowProducts() {
+        const plan = $('input[name="plan"]:checked').val();
+        const revenue = $('input[name="revenue"]:checked').val();
+        
+        if (plan && revenue) {
+            $('#products-container').show();
+            updateProducts();
+        } else {
+            $('#products-container').hide();
+        }
     }
 
     function updateProducts() {
-        var selectedPlan = $('#plan-filters input:checked').val();
-        var selectedRevenue = $('#revenue-filters input:checked').val();
+        let filterData = {
+            action: 'filter_products',
+            nonce: productFilterAjax.nonce,
+            plan: $('input[name="plan"]:checked').val() || '',
+            revenue: $('input[name="revenue"]:checked').val() || ''
+        };
         
-        // Only require plan selection
-        if (!selectedPlan) {
-            $('.products-section .product-variations').html('<p>Please select a plan to view available options.</p>');
-            return;
-        }
+        // Show loading state
+        $('.product-variations').html('<p>Loading...</p>');
         
         // Make AJAX request
         $.ajax({
             url: productFilterAjax.ajaxurl,
             type: 'POST',
-            data: {
-                action: 'filter_products',
-                nonce: productFilterAjax.nonce,
-                plan: selectedPlan,
-                revenue: selectedRevenue || ''
-            },
-            beforeSend: function() {
-                $('.products-section .product-variations').html('<p>Loading...</p>');
-            },
+            data: filterData,
             success: function(response) {
                 if (response.success) {
-                    // Update each section with its corresponding products
+                    // Update each section separately
                     $('#membership-products .product-variations').html(response.data.membership);
                     $('#premium-service-products .product-variations').html(response.data.premium_service);
                     $('#local-chapter-products .product-variations').html(response.data.local_chapter);
                     
-                    // Show sections only if they have products
-                    $('.products-section').each(function() {
-                        $(this).toggle($(this).find('.variations-list').length > 0);
-                    });
-
-                    // Calculate initial total and update selected products
+                    // Calculate total after updating products
+                    calculateTotal();
+                    
+                    // Initialize any dynamic elements
                     updateTotal();
                 } else {
-                    $('.products-section .product-variations').html('<p>Error loading products.</p>');
+                    $('.product-variations').html('<p>Error loading products. Please try again.</p>');
                 }
             },
             error: function() {
-                $('.products-section .product-variations').html('<p>Error loading products.</p>');
+                $('.product-variations').html('<p>Error loading products. Please try again.</p>');
             }
         });
     }
-    
+
+    function calculateTotal() {
+        var total = 0;
+        $('input[type="checkbox"]:checked').each(function() {
+            var price = parseFloat($(this).data('price')) || 0;
+            total += price;
+        });
+        $('#total-price').text(total.toFixed(2));
+    }
+
+    function updateTotal() {
+        let total = 0;
+        $('.product-variations input[type="checkbox"]:checked').each(function() {
+            total += parseFloat($(this).data('price')) || 0;
+        });
+        $('.total-amount').text('$' + total.toFixed(2));
+    }
+
+    function getSelectedProductIds() {
+        let ids = [];
+        $('.product-variations input[type="checkbox"]:checked').each(function() {
+            ids.push($(this).val());
+        });
+        return ids;
+    }
+
+    function updateSubscription() {
+        let selectedProducts = getSelectedProductIds();
+        
+        if (selectedProducts.length === 0) {
+            alert('Please select at least one product to add to your subscription.');
+            return;
+        }
+
+        $('#change-subscription-btn').prop('disabled', true).text('Processing...');
+
+        $.ajax({
+            url: productFilterAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'update_user_subscription',
+                nonce: productFilterAjax.nonce,
+                products: selectedProducts
+            },
+            success: function(response) {
+                if (response.success) {
+                    alert(response.data.message);
+                    window.location.reload();
+                } else {
+                    alert(response.data || 'Error updating subscription. Please try again.');
+                }
+            },
+            error: function() {
+                alert('Error updating subscription. Please try again.');
+            },
+            complete: function() {
+                $('#change-subscription-btn').prop('disabled', false).text('Change My Subscriptions');
+            }
+        });
+    }
+
     // Add event listeners
-    $('.radio-group input[type="radio"]').on('change', updateProducts);
-    $(document).on('change', 'input[type="checkbox"]', updateTotal);
+    $('input[name="plan"], input[name="revenue"]').on('change', function() {
+        checkAndShowProducts();
+    });
     
-    // Initialize sections as hidden
-    $('.products-section').hide();
+    $(document).on('change', '.product-variations input[type="checkbox"]', updateTotal);
+    $(document).on('change', 'input[type="checkbox"]', calculateTotal);
+    $('#change-subscription-btn').on('click', updateSubscription);
+
+    // Initial check for selections
+    checkAndShowProducts();
 });
