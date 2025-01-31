@@ -95,18 +95,7 @@ function render_product_filter() {
         <!-- Section 1: Filters -->
         <div class="filter-section">
             <h3>Subscription Update</h3>
-            <div class="filter-group">
-                <h4>Select Plan</h4>
-                <div class="radio-group" id="plan-filters">
-                    <?php foreach ($plan_values as $plan) : ?>
-                        <label>
-                            <input type="radio" name="plan" value="<?php echo esc_attr($plan); ?>">
-                            <?php echo esc_html($plan); ?>
-                        </label>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-            
+
             <div class="filter-group">
                 <h4>Select Annual Revenue</h4>
                 <div class="radio-group" id="revenue-filters">
@@ -118,6 +107,18 @@ function render_product_filter() {
                     <?php endforeach; ?>
                 </div>
             </div>
+            <div class="filter-group">
+                <h4>Select Plan</h4>
+                <div class="radio-group" id="plan-filters">
+                    <?php foreach ($plan_values as $plan) : ?>
+                        <label>
+                            <input type="radio" name="plan" value="<?php echo esc_attr($plan); ?>">
+                            <?php echo esc_html($plan); ?>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
         </div>
 
         <!-- Section 2: Membership Products -->

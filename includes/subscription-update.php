@@ -235,9 +235,47 @@ function mfx_update_subscription_recurring_period($subscription, $selected_plan)
         error_log("Setting new interval to: $new_interval and period to: $new_period");
         
         try {
+            // Find the last completed or processing order
+            $orders = $subscription->get_related_orders('all', 'desc');
+            $last_valid_order = null;
+            
+            foreach ($orders as $order) {
+                $status = $order->get_status();
+                if ($status === 'completed' || $status === 'processing') {
+                    $last_valid_order = $order;
+                    break;
+                }
+            }
+            
             // Update the subscription object
             $subscription->set_billing_period($new_period);
             $subscription->set_billing_interval($new_interval);
+            
+            // Calculate next payment from last valid order
+            if ($last_valid_order) {
+                $last_order_date = $last_valid_order->get_date_paid() ?: $last_valid_order->get_date_created();
+                if ($last_order_date) {
+                    $last_order_timestamp = $last_order_date->getTimestamp();
+                    
+                    // Calculate next payment date from the last order date
+                    if ($new_period === 'month') {
+                        $next_payment = strtotime("+{$new_interval} month", $last_order_timestamp);
+                    } else if ($new_period === 'year') {
+                        $next_payment = strtotime("+{$new_interval} year", $last_order_timestamp);
+                    }
+                    
+                    if ($next_payment) {
+                        $next_payment_date = date('Y-m-d H:i:s', $next_payment);
+                        error_log("Setting next payment date to: $next_payment_date (calculated from last order: " . $last_order_date->format('Y-m-d H:i:s') . ")");
+                        
+                        // Update the next payment date
+                        $dates_to_update = array('next_payment' => $next_payment_date);
+                        $subscription->update_dates($dates_to_update);
+                    }
+                }
+            } else {
+                error_log("No completed or processing orders found - keeping existing next payment date");
+            }
             
             // Save all changes
             $subscription->save();
@@ -248,8 +286,9 @@ function mfx_update_subscription_recurring_period($subscription, $selected_plan)
             // Verify the changes
             $saved_interval = $subscription->get_billing_interval();
             $saved_period = $subscription->get_billing_period();
+            $saved_next_payment = $subscription->get_date('next_payment');
             
-            error_log("Verification - Saved values: interval=$saved_interval, period=$saved_period");
+            error_log("Verification - Saved values: interval=$saved_interval, period=$saved_period, next_payment=$saved_next_payment");
             
             if ($saved_interval != $new_interval || $saved_period != $new_period) {
                 throw new Exception("Failed to update subscription billing schedule - Expected interval: $new_interval, period: $new_period, got interval: $saved_interval, period: $saved_period");
