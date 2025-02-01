@@ -9,14 +9,40 @@ function mfx_process_subscription_update() {
     
     if (!$subscription_id || empty($selected_variations)) {
         error_log('Invalid subscription data - ID: ' . $subscription_id);
-        wp_send_json_error('Invalid subscription data');
+        wp_send_json_error(array(
+            'message' => 'Invalid subscription data',
+            'code' => 'invalid_data'
+        ));
         return;
     }
 
     $subscription = wcs_get_subscription($subscription_id);
     if (!$subscription) {
         error_log('Subscription not found - ID: ' . $subscription_id);
-        wp_send_json_error('Subscription not found');
+        wp_send_json_error(array(
+            'message' => 'Subscription not found',
+            'code' => 'subscription_not_found'
+        ));
+        return;
+    }
+
+    // Verify user has permission to modify this subscription
+    if (!current_user_can('edit_shop_subscription', $subscription_id) && $subscription->get_user_id() != get_current_user_id()) {
+        error_log('User does not have permission to modify subscription - ID: ' . $subscription_id);
+        wp_send_json_error(array(
+            'message' => 'You do not have permission to modify this subscription',
+            'code' => 'permission_denied'
+        ));
+        return;
+    }
+
+    // Validate subscription status
+    if (!in_array($subscription->get_status(), array('active', 'on-hold', 'pending'))) {
+        error_log('Invalid subscription status for update - ID: ' . $subscription_id . ', Status: ' . $subscription->get_status());
+        wp_send_json_error(array(
+            'message' => 'Subscription cannot be updated in its current status',
+            'code' => 'invalid_status'
+        ));
         return;
     }
 
@@ -89,26 +115,45 @@ function mfx_process_subscription_update() {
 
     if (empty($team_data)) {
         error_log('No team data found in subscription items or parent order');
-        wp_send_json_error('No team data found in subscription items or parent order');
+        wp_send_json_error(array(
+            'message' => 'No team data found in subscription items or parent order',
+            'code' => 'no_team_data'
+        ));
         return;
     }
     
     // Update subscription items
-    $update_items_result = mfx_update_subscription_items($subscription, $selected_variations, $team_data);
-    if (is_wp_error($update_items_result)) {
-        error_log('Failed to update subscription items: ' . $update_items_result->get_error_message());
-        wp_send_json_error($update_items_result->get_error_message());
+    try {
+        $update_items_result = mfx_update_subscription_items($subscription, $selected_variations, $team_data);
+        if (is_wp_error($update_items_result)) {
+            throw new Exception($update_items_result->get_error_message());
+        }
+
+        // Update subscription plan if specified
+        if (!empty($selected_plan)) {
+            $update_plan_result = mfx_update_subscription_recurring_period($subscription, $selected_plan);
+            if (is_wp_error($update_plan_result)) {
+                throw new Exception($update_plan_result->get_error_message());
+            }
+        }
+
+        // Save all changes
+        $subscription->save();
+        
+        wp_send_json_success(array(
+            'message' => 'Subscription updated successfully',
+            'subscription_id' => $subscription_id
+        ));
+        
+    } catch (Exception $e) {
+        error_log('Failed to update subscription: ' . $e->getMessage());
+        wp_send_json_error(array(
+            'message' => $e->getMessage(),
+            'code' => 'update_failed'
+        ));
         return;
     }
-    
-    // Update subscription recurring period
-    $update_period_result = mfx_update_subscription_recurring_period($subscription, $selected_plan);
-    if (is_wp_error($update_period_result)) {
-        error_log('Failed to update subscription period: ' . $update_period_result->get_error_message());
-        wp_send_json_error($update_period_result->get_error_message());
-        return;
-    }
-    
+
     // Handle pending/failed orders
     $last_order = $subscription->get_last_order('all');
     if ($last_order) {
@@ -117,21 +162,26 @@ function mfx_process_subscription_update() {
             $update_pending_result = mfx_update_pending_order_items($last_order, $selected_variations, $team_data);
             if (is_wp_error($update_pending_result)) {
                 error_log('Failed to update pending order: ' . $update_pending_result->get_error_message());
-                wp_send_json_error($update_pending_result->get_error_message());
+                wp_send_json_error(array(
+                    'message' => $update_pending_result->get_error_message(),
+                    'code' => 'update_pending_failed'
+                ));
                 return;
             }
         } elseif ($order_status === 'failed') {
             $update_failed_result = mfx_update_failed_order_items($last_order, $selected_variations, $team_data);
             if (is_wp_error($update_failed_result)) {
                 error_log('Failed to update failed order: ' . $update_failed_result->get_error_message());
-                wp_send_json_error($update_failed_result->get_error_message());
+                wp_send_json_error(array(
+                    'message' => $update_failed_result->get_error_message(),
+                    'code' => 'update_failed_failed'
+                ));
                 return;
             }
         }
     }
     
     error_log('Subscription ' . $subscription_id . ' updated successfully');
-    wp_send_json_success('Subscription updated successfully');
 }
 
 function mfx_update_subscription_items($subscription, $selected_variations, $team_data) {
@@ -329,102 +379,92 @@ function mfx_update_subscription_recurring_period($subscription, $selected_plan)
     }
 }
 
+/**
+ * Update subscription next payment date based on new billing period and interval
+ * 
+ * @param WC_Subscription $subscription The subscription to update
+ * @param string $new_period New billing period (day, week, month, year)
+ * @param int $new_interval New billing interval
+ * @return bool|WP_Error True on success, WP_Error on failure
+ */
 function mfx_update_subscription_next_payment($subscription, $new_period, $new_interval) {
     try {
         error_log("Calculating next payment date for subscription #{$subscription->get_id()} with period: $new_period, interval: $new_interval");
         
-        // Validate input parameters
+        // Validate billing period
         $valid_periods = ['day', 'week', 'month', 'year'];
         if (!in_array($new_period, $valid_periods)) {
             throw new Exception("Invalid billing period: $new_period. Must be one of: " . implode(', ', $valid_periods));
         }
         
+        // Validate billing interval
         if (!is_numeric($new_interval) || $new_interval < 1) {
             throw new Exception("Invalid billing interval: $new_interval. Must be a positive number.");
         }
         
-        // Get all related orders
+        // Get all related orders and sort by ID descending
         $orders = $subscription->get_related_orders('all', 'ids');
         error_log("Found related orders: " . implode(', ', $orders));
         
+        // Find the most recent paid order
         $last_paid_order = null;
         $latest_paid_date = null;
         
-        // Find the most recent paid order
         foreach ($orders as $order_id) {
             $order = wc_get_order($order_id);
-            if ($order && 
-                in_array($order->get_status(), ['completed', 'processing']) && 
-                $order->get_date_paid()
-            ) {
+            if ($order && $order->is_paid()) {
                 $paid_date = $order->get_date_paid();
-                if (!$latest_paid_date || $paid_date > $latest_paid_date) {
-                    $last_paid_order = $order;
+                if ($paid_date && (!$latest_paid_date || $paid_date > $latest_paid_date)) {
                     $latest_paid_date = $paid_date;
-                    error_log("Found valid paid order #{$order_id} with status: " . $order->get_status() . " and paid date: " . $paid_date->format('Y-m-d H:i:s'));
+                    $last_paid_order = $order;
+                    error_log("Found more recent paid order #{$order_id} with date: " . $latest_paid_date->format('Y-m-d H:i:s'));
                 }
             }
         }
         
-        if ($last_paid_order && $latest_paid_date) {
-            $last_order_timestamp = $latest_paid_date->getTimestamp();
-            $current_timestamp = current_time('timestamp');
-            
-            // Calculate next payment date from the last order date
-            switch ($new_period) {
-                case 'day':
-                    $next_payment = strtotime("+{$new_interval} day", $last_order_timestamp);
-                    break;
-                case 'week':
-                    $next_payment = strtotime("+{$new_interval} week", $last_order_timestamp);
-                    break;
-                case 'month':
-                    $next_payment = strtotime("+{$new_interval} month", $last_order_timestamp);
-                    break;
-                case 'year':
-                    $next_payment = strtotime("+{$new_interval} year", $last_order_timestamp);
-                    break;
-            }
-            
-            if ($next_payment) {
-                // If calculated next payment is in the past, calculate from current time instead
-                if ($next_payment < $current_timestamp) {
-                    error_log("Calculated next payment date is in the past. Recalculating from current time.");
-                    switch ($new_period) {
-                        case 'day':
-                            $next_payment = strtotime("+{$new_interval} day", $current_timestamp);
-                            break;
-                        case 'week':
-                            $next_payment = strtotime("+{$new_interval} week", $current_timestamp);
-                            break;
-                        case 'month':
-                            $next_payment = strtotime("+{$new_interval} month", $current_timestamp);
-                            break;
-                        case 'year':
-                            $next_payment = strtotime("+{$new_interval} year", $current_timestamp);
-                            break;
-                    }
-                }
-                
-                $next_payment_date = date('Y-m-d H:i:s', $next_payment);
-                error_log("Setting next payment date to: $next_payment_date");
-                
-                // Update the next payment date
-                $dates_to_update = array('next_payment' => $next_payment_date);
-                $subscription->update_dates($dates_to_update);
-                $subscription->save();
-                
-                return true;
-            } else {
-                throw new Exception("Failed to calculate next payment date");
-            }
+        // Calculate next payment date
+        if ($latest_paid_date) {
+            // Use the last paid date as the base for calculation
+            $base_date = $latest_paid_date;
+            error_log("Using last paid date as base: " . $base_date->format('Y-m-d H:i:s'));
         } else {
-            error_log("No paid orders found with completed/processing status for subscription #{$subscription->get_id()}");
-            return false;
+            // If no paid orders, use subscription start date
+            $base_date = $subscription->get_date('start');
+            if (!$base_date) {
+                throw new Exception("No valid base date found for next payment calculation");
+            }
+            error_log("Using subscription start date as base: " . $base_date->format('Y-m-d H:i:s'));
         }
+        
+        // Calculate the next payment date
+        $next_payment = clone $base_date;
+        switch ($new_period) {
+            case 'day':
+                $next_payment->modify("+{$new_interval} days");
+                break;
+            case 'week':
+                $next_payment->modify("+{$new_interval} weeks");
+                break;
+            case 'month':
+                $next_payment->modify("+{$new_interval} months");
+                break;
+            case 'year':
+                $next_payment->modify("+{$new_interval} years");
+                break;
+        }
+        
+        error_log("Calculated next payment date: " . $next_payment->format('Y-m-d H:i:s'));
+        
+        // Update subscription
+        $subscription->update_dates(array('next_payment' => $next_payment->format('Y-m-d H:i:s')));
+        $subscription->save();
+        
+        error_log("Successfully updated next payment date for subscription #{$subscription->get_id()}");
+        return true;
+        
     } catch (Exception $e) {
         error_log("Error updating next payment date: " . $e->getMessage());
-        throw $e; // Re-throw the exception to be handled by the caller
+        return new WP_Error('next_payment_update_failed', $e->getMessage());
     }
 }
 
