@@ -235,15 +235,61 @@ function mfx_update_subscription_recurring_period($subscription, $selected_plan)
         error_log("Setting new interval to: $new_interval and period to: $new_period");
         
         try {
-            // Find the last completed or processing order
-            $orders = $subscription->get_related_orders('all', 'desc');
-            $last_valid_order = null;
+            // Get all orders for this subscription
+            $subscription_id = $subscription->get_id();
+            error_log("Looking for orders for subscription #$subscription_id");
             
-            foreach ($orders as $order) {
-                $status = $order->get_status();
-                if ($status === 'completed' || $status === 'processing') {
+            global $wpdb;
+            
+            // Get all related orders including parent and renewal orders
+            $query = $wpdb->prepare(
+                "SELECT DISTINCT o.ID, o.post_date, pm_paid.meta_value as date_paid
+                FROM {$wpdb->posts} o
+                LEFT JOIN {$wpdb->postmeta} pm_paid ON o.ID = pm_paid.post_id AND pm_paid.meta_key = '_date_paid'
+                LEFT JOIN {$wpdb->postmeta} pm_rel ON o.ID = pm_rel.post_id 
+                WHERE o.post_type = 'shop_order'
+                AND o.post_status IN ('wc-completed', 'wc-processing')
+                AND (
+                    o.ID = %d
+                    OR (
+                        pm_rel.meta_key IN ('_subscription_renewal', '_subscription_resubscribe', '_subscription_switch')
+                        AND pm_rel.meta_value = %d
+                    )
+                )
+                AND pm_paid.meta_value IS NOT NULL
+                ORDER BY pm_paid.meta_value DESC, o.post_date DESC
+                LIMIT 1",
+                $subscription->get_parent_id(),
+                $subscription_id
+            );
+            
+            $result = $wpdb->get_row($query);
+            error_log("SQL Query for finding latest paid order: " . $query);
+            
+            $last_valid_order = null;
+            if ($result) {
+                $order = wc_get_order($result->ID);
+                if ($order && $order->get_date_paid()) {
                     $last_valid_order = $order;
-                    break;
+                    error_log("Found latest paid order #{$result->ID} with status: " . $order->get_status() . " and paid date: " . $order->get_date_paid()->format('Y-m-d H:i:s'));
+                }
+            } else {
+                // If no order found with the new query, try getting all orders and check manually
+                error_log("No order found with main query, trying alternative approach");
+                $order_ids = wcs_get_subscription_orders($subscription, 'ids');
+                error_log("Found these order IDs: " . implode(', ', $order_ids));
+                
+                foreach ($order_ids as $order_id) {
+                    $order = wc_get_order($order_id);
+                    if ($order && 
+                        in_array($order->get_status(), ['completed', 'processing']) && 
+                        $order->get_date_paid()
+                    ) {
+                        if (!$last_valid_order || $order->get_date_paid() > $last_valid_order->get_date_paid()) {
+                            $last_valid_order = $order;
+                            error_log("Found valid order #{$order_id} with status: " . $order->get_status() . " and paid date: " . $order->get_date_paid()->format('Y-m-d H:i:s'));
+                        }
+                    }
                 }
             }
             
@@ -252,43 +298,20 @@ function mfx_update_subscription_recurring_period($subscription, $selected_plan)
             $subscription->set_billing_interval($new_interval);
             
             // Calculate next payment from last valid order
-            if ($last_valid_order) {
-                $last_order_date = $last_valid_order->get_date_paid() ?: $last_valid_order->get_date_created();
-                if ($last_order_date) {
-                    $last_order_timestamp = $last_order_date->getTimestamp();
-                    
-                    // Calculate next payment date from the last order date
-                    if ($new_period === 'month') {
-                        $next_payment = strtotime("+{$new_interval} month", $last_order_timestamp);
-                    } else if ($new_period === 'year') {
-                        $next_payment = strtotime("+{$new_interval} year", $last_order_timestamp);
-                    }
-                    
-                    if ($next_payment) {
-                        $next_payment_date = date('Y-m-d H:i:s', $next_payment);
-                        error_log("Setting next payment date to: $next_payment_date (calculated from last order: " . $last_order_date->format('Y-m-d H:i:s') . ")");
-                        
-                        // Update the next payment date
-                        $dates_to_update = array('next_payment' => $next_payment_date);
-                        $subscription->update_dates($dates_to_update);
-                    }
-                }
-            } else {
-                error_log("No completed or processing orders found - keeping existing next payment date");
-            }
-            
             // Save all changes
             $subscription->save();
             
             // Force refresh the subscription from the database
             $subscription = wcs_get_subscription($subscription->get_id());
             
+            // Update next payment date
+            mfx_update_subscription_next_payment($subscription, $new_period, $new_interval);
+            
             // Verify the changes
             $saved_interval = $subscription->get_billing_interval();
             $saved_period = $subscription->get_billing_period();
-            $saved_next_payment = $subscription->get_date('next_payment');
             
-            error_log("Verification - Saved values: interval=$saved_interval, period=$saved_period, next_payment=$saved_next_payment");
+            error_log("Verification - Saved values: interval=$saved_interval, period=$saved_period");
             
             if ($saved_interval != $new_interval || $saved_period != $new_period) {
                 throw new Exception("Failed to update subscription billing schedule - Expected interval: $new_interval, period: $new_period, got interval: $saved_interval, period: $saved_period");
@@ -303,6 +326,105 @@ function mfx_update_subscription_recurring_period($subscription, $selected_plan)
         $error_message = 'Error updating subscription period: ' . $e->getMessage();
         error_log($error_message);
         return new WP_Error('update_error', $error_message);
+    }
+}
+
+function mfx_update_subscription_next_payment($subscription, $new_period, $new_interval) {
+    try {
+        error_log("Calculating next payment date for subscription #{$subscription->get_id()} with period: $new_period, interval: $new_interval");
+        
+        // Validate input parameters
+        $valid_periods = ['day', 'week', 'month', 'year'];
+        if (!in_array($new_period, $valid_periods)) {
+            throw new Exception("Invalid billing period: $new_period. Must be one of: " . implode(', ', $valid_periods));
+        }
+        
+        if (!is_numeric($new_interval) || $new_interval < 1) {
+            throw new Exception("Invalid billing interval: $new_interval. Must be a positive number.");
+        }
+        
+        // Get all related orders
+        $orders = $subscription->get_related_orders('all', 'ids');
+        error_log("Found related orders: " . implode(', ', $orders));
+        
+        $last_paid_order = null;
+        $latest_paid_date = null;
+        
+        // Find the most recent paid order
+        foreach ($orders as $order_id) {
+            $order = wc_get_order($order_id);
+            if ($order && 
+                in_array($order->get_status(), ['completed', 'processing']) && 
+                $order->get_date_paid()
+            ) {
+                $paid_date = $order->get_date_paid();
+                if (!$latest_paid_date || $paid_date > $latest_paid_date) {
+                    $last_paid_order = $order;
+                    $latest_paid_date = $paid_date;
+                    error_log("Found valid paid order #{$order_id} with status: " . $order->get_status() . " and paid date: " . $paid_date->format('Y-m-d H:i:s'));
+                }
+            }
+        }
+        
+        if ($last_paid_order && $latest_paid_date) {
+            $last_order_timestamp = $latest_paid_date->getTimestamp();
+            $current_timestamp = current_time('timestamp');
+            
+            // Calculate next payment date from the last order date
+            switch ($new_period) {
+                case 'day':
+                    $next_payment = strtotime("+{$new_interval} day", $last_order_timestamp);
+                    break;
+                case 'week':
+                    $next_payment = strtotime("+{$new_interval} week", $last_order_timestamp);
+                    break;
+                case 'month':
+                    $next_payment = strtotime("+{$new_interval} month", $last_order_timestamp);
+                    break;
+                case 'year':
+                    $next_payment = strtotime("+{$new_interval} year", $last_order_timestamp);
+                    break;
+            }
+            
+            if ($next_payment) {
+                // If calculated next payment is in the past, calculate from current time instead
+                if ($next_payment < $current_timestamp) {
+                    error_log("Calculated next payment date is in the past. Recalculating from current time.");
+                    switch ($new_period) {
+                        case 'day':
+                            $next_payment = strtotime("+{$new_interval} day", $current_timestamp);
+                            break;
+                        case 'week':
+                            $next_payment = strtotime("+{$new_interval} week", $current_timestamp);
+                            break;
+                        case 'month':
+                            $next_payment = strtotime("+{$new_interval} month", $current_timestamp);
+                            break;
+                        case 'year':
+                            $next_payment = strtotime("+{$new_interval} year", $current_timestamp);
+                            break;
+                    }
+                }
+                
+                $next_payment_date = date('Y-m-d H:i:s', $next_payment);
+                error_log("Setting next payment date to: $next_payment_date");
+                
+                // Update the next payment date
+                $dates_to_update = array('next_payment' => $next_payment_date);
+                $subscription->update_dates($dates_to_update);
+                $subscription->save();
+                
+                return true;
+            } else {
+                throw new Exception("Failed to calculate next payment date");
+            }
+        } else {
+            error_log("No paid orders found with completed/processing status for subscription #{$subscription->get_id()}");
+            return false;
+        }
+    } catch (Exception $e) {
+        error_log("Error updating next payment date: " . $e->getMessage());
+        throw $e; // Re-throw the exception to be handled by the caller
     }
 }
 

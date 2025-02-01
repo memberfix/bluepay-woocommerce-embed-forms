@@ -4,6 +4,7 @@ if (!defined('ABSPATH')) {
 }
 
 require_once plugin_dir_path( __FILE__ ) . 'subscription-update.php';
+require_once plugin_dir_path( __FILE__ ) . 'current-subscription-details.php';
 
 // Register shortcode and necessary actions
 add_shortcode('product_filter', 'render_product_filter');
@@ -67,35 +68,12 @@ function render_product_filter() {
             <!-- Current Subscription Details -->
             <div class="current-subscription-details">
                 <h3>Current Subscription Details</h3>
-                <?php
-                $current_user_id = get_current_user_id();
-                $subscriptions = wcs_get_users_subscriptions($current_user_id);
-                if (!empty($subscriptions)): 
-                    foreach ($subscriptions as $subscription): ?>
-                        <div class="subscription-info">
-                            <h5>Subscription #<?php echo esc_html($subscription->get_id()); ?></h4>
-                            <?php foreach ($subscription->get_items() as $item): ?>
-                                <div class="item-info">
-                                    <strong><?php echo esc_html($item->get_name()); ?></strong>
-                                    <?php 
-                                    foreach ($item->get_formatted_meta_data() as $meta): ?>
-                                        <p><<?php echo esc_html($meta->display_key); ?>: 
-                                           <?php echo wp_kses_post($meta->display_value); ?></p>
-                                    <?php endforeach; ?>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endforeach;
-                else: ?>
-                    <p>No active subscriptions found.</p>
-                <?php endif; ?>
+                <?php do_action('mfx_display_current_subscription_details'); ?>
             </div>
         <?php endif; ?>
 
         <!-- Section 1: Filters -->
         <div class="filter-section">
-            <h3>Subscription Update</h3>
-
             <div class="filter-group">
                 <h4>Select Annual Revenue</h4>
                 <div class="radio-group" id="revenue-filters">

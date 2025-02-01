@@ -35,9 +35,16 @@ input[type="text"],
 input[type="email"],
 input[type="tel"],
 
+.product-filter-container {
+    display: flex !important;
+}
 .filter-section {
-    display: flex;
+    display: flex !important;
     flex-direction: column;
+}
+
+.filter-group {
+    margin : 1rem;
 }
 
 .select-input {

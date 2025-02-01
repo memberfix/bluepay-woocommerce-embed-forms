@@ -129,6 +129,9 @@
     border-radius: 5px;
     margin: 0;
     margin-bottom: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 .filter-group {
@@ -341,6 +344,8 @@
 
 .variation-details {
     display: flex;
+    flex-direction: column;
+    gap: 5px;
     justify-content: space-between;
     align-items: center;
     flex-grow: 1;
