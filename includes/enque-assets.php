@@ -30,13 +30,13 @@ function bluepay_enqueue_assets_conditionally() {
             true // Load in footer
         );
 
-        // Enqueue JavaScript for dropdowns and date mask
+        // Enqueue subscription details script
         wp_enqueue_script(
-            'bluepay-submit-request-handle', 
-            plugin_dir_url(__FILE__) . '../assets/js/date-input-mask.js',
-            array(), // No Dependencies
-            '1.0.0', // Version
-            true // Load in footer
+            'mfx-subscription-details',
+            plugins_url('/assets/js/subscription-details.js', dirname(__FILE__)),
+            array('jquery'),
+            '1.0.2.4',
+            true
         );
 
         // Localize script to pass the AJAX URL to the JavaScript
@@ -47,6 +47,12 @@ function bluepay_enqueue_assets_conditionally() {
                 'ajax_url' => admin_url('admin-ajax.php'), // WordPress AJAX endpoint
             )
         );
+
+        // Localize subscription details script
+        wp_localize_script('mfx-subscription-details', 'subscriptionDetailsAjax', array(
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('subscription_details_nonce')
+        ));
     }
 }
 add_action('wp_enqueue_scripts', 'bluepay_enqueue_assets_conditionally');

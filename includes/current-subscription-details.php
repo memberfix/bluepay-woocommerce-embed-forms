@@ -3,9 +3,24 @@
 /**
  * Display current subscription details for the logged-in user
  * Includes subscription items, payment dates, and status information
+ * Output is not cached and dynamically loaded each time
+ * 
+ * Usage as shortcode: [mfx_subscription_details]
+ * 
+ * @param array $atts Shortcode attributes (not used currently)
+ * @return string HTML output of subscription details
  */
-function mfx_get_current_subscription_details() {
+function mfx_get_current_subscription_details($atts = array()) {
+    // Prevent caching
+    nocache_headers();
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Cache-Control: post-check=0, pre-check=0', false);
+    header('Pragma: no-cache');
+    
     error_log("DEBUG: Starting subscription details function");
+    
+    // Start output buffering to capture the HTML output
+    ob_start();
     
     // Get current user's subscriptions
     $current_user_id = get_current_user_id();
@@ -14,10 +29,13 @@ function mfx_get_current_subscription_details() {
     if (empty($subscriptions)) {
         error_log("DEBUG: No active subscriptions found for user ID: " . $current_user_id);
         echo '<p>No active subscriptions found.</p>';
-        return;
+        return ob_get_clean();
     }
 
     error_log("DEBUG: Found " . count($subscriptions) . " subscriptions");
+    
+    // Add timestamp to force dynamic content
+    echo '<!-- Subscription details generated at: ' . current_time('mysql') . ' -->';
     
     foreach ($subscriptions as $subscription) {
         $subscription_id = $subscription->get_id();
@@ -63,7 +81,7 @@ function mfx_get_current_subscription_details() {
         
         // Display subscription information
         ?>
-        <div class="subscription-info">
+        <div class="subscription-info" data-subscription-id="<?php echo esc_attr($subscription_id); ?>">
             <h4>Subscription #<?php echo esc_html($subscription_id); ?></h4>
             
             <!-- Subscription Dates -->
@@ -131,7 +149,25 @@ function mfx_get_current_subscription_details() {
         </div>
         <?php
     }
+    
+    // Return the buffered output
+    return ob_get_clean();
 }
 
-// Hook the function to display subscription details
-add_action('mfx_display_current_subscription_details', 'mfx_get_current_subscription_details');
+// Register shortcode [mfx_subscription_details]
+add_shortcode('mfx_subscription_details', 'mfx_get_current_subscription_details');
+
+// Hook the function to display subscription details with cache prevention
+add_action('mfx_display_current_subscription_details', function() {
+    echo mfx_get_current_subscription_details();
+});
+
+// Add AJAX action to refresh subscription details
+add_action('wp_ajax_refresh_subscription_details', function() {
+    echo mfx_get_current_subscription_details();
+    wp_die();
+});
+add_action('wp_ajax_nopriv_refresh_subscription_details', function() {
+    echo mfx_get_current_subscription_details();
+    wp_die();
+});

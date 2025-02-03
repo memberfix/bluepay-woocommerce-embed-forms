@@ -1,8 +1,8 @@
-.product-filter-container {
+/* .product-filter-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
-}
+} */
 
 /* Current Subscription Details */
 .current-subscription-details {
@@ -20,6 +20,7 @@
     z-index: 1000; /* Ensure it stays above other elements */
 }
 
+/* 
 
 .subscription-header {
     display: flex;
@@ -73,7 +74,7 @@
     border-radius: 4px;
 }
 
-/* .item-name {
+.item-name {
     font-weight: 600;
     margin: 0 0 10px;
 }
@@ -113,9 +114,8 @@
 .item-info p {
     margin: 5px 0;
     font-size: 14px;
-} */
+} 
 
-/* Filter Sections Layout */
 .filter-sections-container {
     display: flex;
     gap: 20px;
@@ -169,7 +169,11 @@
     color: #2271b1;
 }
 
+*/
+
+
 /* Products Container */
+/* 
 #products-container {
     transition: opacity 0.3s ease-in-out;
     opacity: 0;
@@ -256,6 +260,8 @@
 }
 
 /* Responsive Design */
+
+/*
 @media (max-width: 768px) {
     .filter-sections-container {
         flex-direction: column;
@@ -300,7 +306,7 @@
 
 .subscription-info-container {
     position: fixed;
-    top: 32px; /* Account for WP admin bar */
+    top: 32px; 
     right: 20px;
     width: 300px;
     max-height: calc(100vh - 100px);
@@ -421,4 +427,4 @@
     .product-filter-container {
         margin-right: auto;
     }
-}
+} */

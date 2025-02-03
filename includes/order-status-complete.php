@@ -16,9 +16,21 @@ function mfx_update_order_status_and_txn_id($order_id, $txn_id) {
         $order_note = 'Transaction completed via BluePay. Invoice ID: ' . esc_html($txn_id) . '. Status: Completed.';
 
         $order->add_order_note($order_note);
+
+        if (!$order->is_paid()) {             
+        $order->payment_complete($txn_id);         
+        }
         // Save the order
         $order->save();
+
     }
+    // Trigger payment complete actions
+    do_action('woocommerce_payment_complete', $order_id);
+    do_action('woocommerce_order_status_completed', $order_id, $order);
+
+
+
+
     if (wcs_order_contains_subscription($order)) {
         // Get the subscriptions linked to the order
         $subscriptions = wcs_get_subscriptions_for_order($order_id, array('order_type' => 'any'));
