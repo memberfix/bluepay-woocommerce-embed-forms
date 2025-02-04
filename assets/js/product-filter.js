@@ -1,4 +1,5 @@
 jQuery(document).ready(function($) {
+
     function checkAndShowProducts() {
         const plan = $('input[name="plan"]:checked').val();
         const revenue = $('input[name="revenue"]:checked').val();
@@ -82,7 +83,7 @@ jQuery(document).ready(function($) {
             return;
         }
 
-        $('#change-subscription-btn').prop('disabled', true).text('Processing...');
+        $('#update-subscription-btn').prop('disabled', true).text('Processing...');
 
         $.ajax({
             url: productFilterAjax.ajaxurl,
@@ -90,6 +91,7 @@ jQuery(document).ready(function($) {
             data: {
                 action: 'update_user_subscription',
                 nonce: productFilterAjax.nonce,
+                subscription_id: subscriptionId,
                 products: selectedProducts
             },
             success: function(response) {
@@ -104,7 +106,7 @@ jQuery(document).ready(function($) {
                 alert('Error updating subscription. Please try again.');
             },
             complete: function() {
-                $('#change-subscription-btn').prop('disabled', false).text('Change My Subscriptions');
+                $('#update-subscription-btn').prop('disabled', false).text('Update Subscription');
             }
         });
     }

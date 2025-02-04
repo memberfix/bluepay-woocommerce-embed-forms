@@ -41,10 +41,46 @@ function mfx_get_current_subscription_details($atts = array()) {
         $subscription_id = $subscription->get_id();
         error_log("DEBUG: Processing subscription #{$subscription_id}");
         
-        // Get subscription dates
+        // Get subscription dates with proper type handling
         $next_payment = $subscription->get_date('next_payment');
+        error_log("DEBUG: Raw next_payment value: " . print_r($next_payment, true));
+        error_log("DEBUG: Next payment type: " . gettype($next_payment));
+        error_log("DEBUG: Next payment from meta: " . print_r($subscription->get_meta('_schedule_next_payment'), true));
+        
+        // Try to get next payment from schedule meta
+        if (empty($next_payment)) {
+            $next_payment = $subscription->get_meta('_schedule_next_payment');
+            error_log("DEBUG: Using next payment from meta: " . print_r($next_payment, true));
+        }
+        
+        if ($next_payment) {
+            if (is_string($next_payment)) {
+                error_log("DEBUG: Converting string date to timestamp: {$next_payment}");
+                $timestamp = wcs_date_to_time($next_payment);
+                error_log("DEBUG: Timestamp after conversion: {$timestamp}");
+                if ($timestamp) {
+                    $next_payment = new WC_DateTime("@{$timestamp}");
+                    error_log("DEBUG: Created WC_DateTime object");
+                }
+            } elseif (is_numeric($next_payment)) {
+                error_log("DEBUG: Converting numeric timestamp: {$next_payment}");
+                $next_payment = new WC_DateTime("@{$next_payment}");
+            }
+        }
+        
+        error_log("DEBUG: Final next_payment object: " . ($next_payment instanceof WC_DateTime ? 'WC_DateTime' : gettype($next_payment)));
+        
         $start_date = $subscription->get_date('start');
+        if (is_string($start_date)) {
+            $start_date = wcs_date_to_time($start_date);
+            $start_date = new WC_DateTime("@$start_date");
+        }
+        
         $last_order_date = $subscription->get_date('last_order_date_created');
+        if (is_string($last_order_date)) {
+            $last_order_date = wcs_date_to_time($last_order_date);
+            $last_order_date = new WC_DateTime("@$last_order_date");
+        }
         
         // Get renewal orders
         $renewal_orders = $subscription->get_related_orders('all', 'renewal');
@@ -79,72 +115,123 @@ function mfx_get_current_subscription_details($atts = array()) {
         $total = $subscription->get_total();
         $status = $subscription->get_status();
         
-        // Display subscription information
+        // Get team name from subscription
+        $team_name = '';
+        foreach ($subscription->get_items() as $item) {
+            if ($variation_data = $item->get_formatted_meta_data()) {
+                foreach ($variation_data as $meta) {
+                    if (strtolower($meta->key) === 'team_name') {
+                        $team_name = $meta->value;
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        // Get billing period and interval
+        $billing_period = $subscription->get_billing_period();
+        $billing_interval = $subscription->get_billing_interval();
+        $recurring_amount = $subscription->get_total();
+        
+        // Format recurring period text
+        $recurring_period = sprintf(
+            '%s%s %s',
+            $billing_interval > 1 ? $billing_interval . ' ' : '',
+            $billing_interval > 1 ? $billing_period . 's' : $billing_period,
+            wc_price($recurring_amount)
+        );
+        
         ?>
         <div class="subscription-info" data-subscription-id="<?php echo esc_attr($subscription_id); ?>">
-            <h4>Subscription #<?php echo esc_html($subscription_id); ?></h4>
+            <!-- Team Name -->
+            <?php if (!empty($team_name)): ?>
+            <h3 class="team-name"><?php echo esc_html($team_name); ?></h3>
+            <?php endif; ?>
             
-            <!-- Subscription Dates -->
-            <div class="subscription-dates">
-                <p>
-                    <strong>Start Date:</strong>
-                    <?php echo ($start_date instanceof WC_DateTime) ? esc_html($start_date->date_i18n('F j, Y')) : 'N/A'; ?>
+            <!-- Subscription Header -->
+            <div class="subscription-header">
+                <p class="subscription-id">#<?php echo esc_html($subscription_id); ?></p>
+                <p class="subscription-status <?php echo esc_attr($status); ?>">
+                    <?php echo esc_html(wcs_get_subscription_status_name($status)); ?>
                 </p>
-                <p>
-                    <strong>Next Payment:</strong>
-                    <?php echo ($next_payment instanceof WC_DateTime) ? esc_html($next_payment->date_i18n('F j, Y')) : 'N/A'; ?>
-                </p>
-                <p>
-                    <strong>Last Order Date:</strong>
-                    <?php echo ($last_order_date instanceof WC_DateTime) ? esc_html($last_order_date->date_i18n('F j, Y')) : 'N/A'; ?>
-                </p>
-                <?php if ($last_payment_date instanceof WC_DateTime): ?>
-                <p>
-                    <strong>Last Payment Date:</strong>
-                    <?php echo esc_html($last_payment_date->date_i18n('F j, Y')); ?>
-                </p>
-                <?php endif; ?>
             </div>
 
-            <!-- Subscription Details -->
-            <div class="subscription-details">
-                <p><strong>Total Amount:</strong> <?php echo wc_price($total); ?></p>
-                <p><strong>Status:</strong> <?php echo esc_html(wcs_get_subscription_status_name($status)); ?></p>
+            <!-- Subscription Overview -->
+            <div class="subscription-overview">
+                <p class="recurring-total">
+                    <span class="label">Recurring:</span>
+                    <span class="value"><?php echo $recurring_period; ?></span>
+                </p>
+                
+                <?php if ($last_payment_date instanceof WC_DateTime): ?>
+                <p class="last-payment">
+                    <span class="label">Last Payment:</span>
+                    <span class="value"><?php echo esc_html($last_payment_date->date_i18n('F j, Y')); ?></span>
+                </p>
+                <?php endif; ?>
+                
+                <?php 
+                error_log("DEBUG: Next payment object type: " . (is_object($next_payment) ? get_class($next_payment) : gettype($next_payment)));
+                if ($next_payment instanceof WC_DateTime): 
+                    error_log("DEBUG: Next payment date is valid WC_DateTime");
+                ?>
+                <p class="next-payment">
+                    <span class="label">Next Payment:</span>
+                    <span class="value"><?php echo esc_html($next_payment->date_i18n('F j, Y')); ?></span>
+                </p>
+                <?php else:
+                    error_log("DEBUG: Next payment date is not a valid WC_DateTime instance");
+                endif; ?>
             </div>
 
             <!-- Subscription Items -->
             <div class="subscription-items">
-                <h5>Items in this Subscription:</h5>
-                <?php foreach ($subscription->get_items() as $item): ?>
-                    <div class="item-info">
-                        <!-- Item Name and Quantity -->
-                        <p class="item-name">
-                            <strong><?php echo esc_html($item->get_name()); ?></strong>
-                            <?php if ($item->get_quantity() > 1): ?>
-                                <span class="item-quantity">× <?php echo esc_html($item->get_quantity()); ?></span>
-                            <?php endif; ?>
-                        </p>
-                        
-                        <!-- Variation Details -->
-                        <?php 
-                        $variation_data = $item->get_formatted_meta_data();
-                        if (!empty($variation_data)): ?>
-                            <div class="variation-details">
-                                <?php foreach ($variation_data as $meta): ?>
-                                    <p class="variation-attribute">
-                                        <span class="attribute-label"><?php echo esc_html($meta->display_key); ?>:</span>
-                                        <span class="attribute-value"><?php echo wp_kses_post($meta->display_value); ?></span>
-                                    </p>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
-                        
-                        <!-- Item Total -->
-                        <p class="item-total">
-                            <strong>Item Total:</strong> <?php echo wc_price($item->get_total()); ?>
-                        </p>
-                    </div>
-                <?php endforeach; ?>
+                <table class="subscription-items-table">
+                    <thead>
+                        <tr>
+                            <th class="product-name">Product</th>
+                            <th class="product-total">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($subscription->get_items() as $item): ?>
+                        <tr class="subscription-item">
+                            <td class="product-name">
+                                <?php 
+                                echo esc_html($item->get_name());
+                                if ($item->get_quantity() > 1) {
+                                    echo ' <strong class="product-quantity">×&nbsp;' . esc_html($item->get_quantity()) . '</strong>';
+                                }
+                                
+                                // Display variation data
+                                // if ($variation_data = $item->get_formatted_meta_data()) {
+                                //     echo '<dl class="variation">';
+                                //     foreach ($variation_data as $meta) {
+                                //         // Skip team_name as it's shown in the header
+                                //         if (strtolower($meta->key) !== 'team_name') {
+                                //             printf('<dt>%s:</dt><dd>%s</dd>', 
+                                //                 wp_kses_post($meta->display_key), 
+                                //                 wp_kses_post($meta->display_value)
+                                //             );
+                                //         }
+                                //     }
+                                //     echo '</dl>';
+                                // }
+                                ?>
+                            </td>
+                            <td class="product-total">
+                                <?php echo wc_price($item->get_total()); ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                    <tfoot>
+                        <tr class="order-total">
+                            <th>Total:</th>
+                            <td><?php echo wc_price($total); ?></td>
+                        </tr>
+                    </tfoot>
+                </table>
             </div>
         </div>
         <?php
