@@ -60,6 +60,7 @@ function bluepay_register_settings() {
     register_setting('bluepay_settings_group', 'bluepay_confirmed_order_page_additional_details');
     register_setting('bluepay_settings_group', 'bluepay_sent_to_email_subject');
     register_setting('bluepay_settings_group', 'bluepay_sent_to_email_body');
+    register_setting('bluepay_settings_group', 'renewal_form_page_url');
 }
 
 
@@ -98,6 +99,13 @@ function render_bluepay_settings_page() {
                 <tr>
                     <th scope="row"><label for="bluepay_confirmed_order_page_url">Order Confirmation Page URL</label></th>
                     <td><input type="text" name="bluepay_confirmed_order_page_url" id="bluepay_confirmed_order_page_url" value="<?php echo esc_url(get_option('bluepay_confirmed_order_page_url')); ?>" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="renewal_form_page_url">Change Membership Page URL</label></th>
+                    <td>
+                        <input type="text" name="renewal_form_page_url" id="renewal_form_page_url" value="<?php echo esc_url(get_option('renewal_form_page_url', '/change-my-membership')); ?>" class="regular-text">
+                        <p class="description">The URL of the page where members can change their membership. Default: /change-my-membership</p>
+                    </td>
                 </tr>
                 <tr>
                     <th scope="row"><label for="bluepay_confirmed_order_page_additional_details">Order Confirmation Page Additional details</label></th>

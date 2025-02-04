@@ -10,7 +10,7 @@ function mfx_process_subscription_update() {
     if (!$subscription_id || empty($selected_variations)) {
         error_log('Invalid subscription data - ID: ' . $subscription_id);
         wp_send_json_error(array(
-            'message' => 'Invalid subscription data',
+            'message' => 'Invalid membership data',
             'code' => 'invalid_data'
         ));
         return;
@@ -20,7 +20,7 @@ function mfx_process_subscription_update() {
     if (!$subscription) {
         error_log('Subscription not found - ID: ' . $subscription_id);
         wp_send_json_error(array(
-            'message' => 'Subscription not found',
+            'message' => 'Membership not found',
             'code' => 'subscription_not_found'
         ));
         return;
@@ -30,7 +30,7 @@ function mfx_process_subscription_update() {
     if (!current_user_can('edit_shop_subscription', $subscription_id) && $subscription->get_user_id() != get_current_user_id()) {
         error_log('User does not have permission to modify subscription - ID: ' . $subscription_id);
         wp_send_json_error(array(
-            'message' => 'You do not have permission to modify this subscription',
+            'message' => 'You do not have permission to modify this membership',
             'code' => 'permission_denied'
         ));
         return;
@@ -40,7 +40,7 @@ function mfx_process_subscription_update() {
     if (!in_array($subscription->get_status(), array('active', 'on-hold', 'pending'))) {
         error_log('Invalid subscription status for update - ID: ' . $subscription_id . ', Status: ' . $subscription->get_status());
         wp_send_json_error(array(
-            'message' => 'Subscription cannot be updated in its current status',
+            'message' => 'Membership cannot be updated in its current status',
             'code' => 'invalid_status'
         ));
         return;
@@ -140,9 +140,14 @@ function mfx_process_subscription_update() {
         // Save all changes
         $subscription->save();
         
+        // Get the redirect URL
+        $redirect_url = wc_get_account_endpoint_url('mfx-membership');
+        error_log('Redirect URL for membership update: ' . $redirect_url);
+        
         wp_send_json_success(array(
-            'message' => 'Subscription updated successfully',
-            'subscription_id' => $subscription_id
+            'message' => 'Membership updated successfully',
+            'subscription_id' => $subscription_id,
+            'redirect' => $redirect_url
         ));
         
     } catch (Exception $e) {

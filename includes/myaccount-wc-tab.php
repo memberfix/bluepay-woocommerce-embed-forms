@@ -22,7 +22,7 @@ function memberships_tab_content() {
         echo do_shortcode('[mfx_subscription_details]');
         ?>
         <div>
-            <a href="<?php echo wc_get_page_permalink('myaccount'); ?>?action=change_membership">Change Membership</a>
+            <a href="<?php echo esc_url(get_option('renewal_form_page_url', '/change-my-membership')); ?>" class="elementor-button elementor-button-link elementor-size-sm" style="margin-top: 1rem;">Change Membership</a>
         </div>
         <?php
 

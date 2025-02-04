@@ -3,7 +3,7 @@
  * Plugin Name: BluePay Woocommerce Embed Forms
  * Plugin URI: https://memberfix.rocks
  * Description: Embed forms. Changing order status
- * Version: 1.0.3.2
+ * Version: 1.0.3.4
  * Requires at least: 6.0
  * Requires PHP: 7.0
  * Author: Denys Melnychuk
@@ -48,7 +48,33 @@ add_action('wp_enqueue_scripts', 'mfx_enqueue_subscription_update_scripts');
 
 // Plugin activation hook
 function mfx_bluepay_activate() {
-    // Perform tasks on activation, if any
+    // Create Change Membership page if it doesn't exist
+    $page = get_page_by_path('change-my-membership');
+    
+    if (empty($page)) {
+        $page_data = array(
+            'post_title'    => 'Change My Membership',
+            'post_name'     => 'change-my-membership',
+            'post_content'  => '[product_filter]',
+            'post_status'   => 'publish',
+            'post_type'     => 'page',
+            'post_author'   => 1
+        );
+        
+        $page_id = wp_insert_post($page_data);
+        
+        if (!is_wp_error($page_id)) {
+            // Force refresh permalink
+            $page_url = get_permalink($page_id);
+            flush_rewrite_rules();
+            
+            // Save the URL in plugin settings
+            update_option('renewal_form_page_url', $page_url);
+        }
+    } else {
+        // Update existing page URL in settings
+        update_option('renewal_form_page_url', get_permalink($page->ID));
+    }
 }
 
 register_activation_hook( __FILE__, 'mfx_bluepay_activate' );

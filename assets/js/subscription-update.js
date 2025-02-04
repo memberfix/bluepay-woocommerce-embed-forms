@@ -24,21 +24,25 @@ jQuery(document).ready(function($) {
                 selected_plan: selectedPlan
             },
             beforeSend: function() {
-                $('#update-subscription-btn').prop('disabled', true).text('Updating...');
+                $('#update-subscription-btn').prop('disabled', true).text('Updating membership...');
             },
             success: function(response) {
                 if (response.success) {
-                    alert('Subscription updated successfully!');
-                    location.reload();
+                    alert('Membership updated successfully!');
+                    if (response.data.redirect) {
+                        window.location.href = response.data.redirect;
+                    } else {
+                        location.reload();
+                    }
                 } else {
                     alert('Error: ' + response.data);
                 }
             },
             error: function() {
-                alert('An error occurred while updating the subscription.');
+                alert('An error occurred while updating the membership.');
             },
             complete: function() {
-                $('#update-subscription-btn').prop('disabled', false).text('Update Subscription');
+                $('#update-subscription-btn').prop('disabled', false).text('Update Membership');
             }
         });
     });

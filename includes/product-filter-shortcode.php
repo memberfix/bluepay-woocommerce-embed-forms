@@ -67,7 +67,7 @@ function render_product_filter() {
         <?php if (function_exists('wcs_get_users_subscriptions')): ?>
             <!-- Current Subscription Details -->
             <div class="current-subscription-details">
-                <h3>Current Subscription Details</h3>
+                <h3>Current Membership Details</h3>
                 <?php do_action('mfx_display_current_subscription_details'); ?>
             </div>
         <?php endif; ?>
@@ -133,7 +133,7 @@ function render_product_filter() {
                     endif;
                 endif; ?>
                 <div class="update-subscription-button-container">
-                    <button id="update-subscription-btn" class="button alt">Update Subscription</button>
+                    <button id="update-subscription-btn" class="button alt">Update Membership</button>
                 </div>
             </div>
         </div>
@@ -225,5 +225,7 @@ function handle_product_filter() {
     // Debugging
     error_log('handle_product_filter: ' . print_r($response_data, true));
     
+    // Add redirect URL to the response
+    $response_data['redirect'] = wc_get_account_endpoint_url('mfx-membership');
     wp_send_json_success($response_data);
 }

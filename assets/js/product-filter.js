@@ -79,7 +79,7 @@ jQuery(document).ready(function($) {
         let selectedProducts = getSelectedProductIds();
         
         if (selectedProducts.length === 0) {
-            alert('Please select at least one product to add to your subscription.');
+            alert('Please select at least one product to add to your membership.');
             return;
         }
 
@@ -97,16 +97,20 @@ jQuery(document).ready(function($) {
             success: function(response) {
                 if (response.success) {
                     alert(response.data.message);
-                    window.location.reload();
+                    if (response.data.redirect) {
+                        window.location.href = response.data.redirect;
+                    } else {
+                        window.location.reload();
+                    }
                 } else {
-                    alert(response.data || 'Error updating subscription. Please try again.');
+                    alert(response.data || 'Error updating membership. Please try again.');
                 }
             },
             error: function() {
-                alert('Error updating subscription. Please try again.');
+                alert('Error updating membership. Please try again.');
             },
             complete: function() {
-                $('#update-subscription-btn').prop('disabled', false).text('Update Subscription');
+                $('#update-subscription-btn').prop('disabled', false).text('Update Membership');
             }
         });
     }
