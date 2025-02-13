@@ -204,19 +204,22 @@ function mfx_get_current_subscription_details($atts = array()) {
                                 }
                                 
                                 // Display variation data
-                                // if ($variation_data = $item->get_formatted_meta_data()) {
-                                //     echo '<dl class="variation">';
-                                //     foreach ($variation_data as $meta) {
-                                //         // Skip team_name as it's shown in the header
-                                //         if (strtolower($meta->key) !== 'team_name') {
-                                //             printf('<dt>%s:</dt><dd>%s</dd>', 
-                                //                 wp_kses_post($meta->display_key), 
-                                //                 wp_kses_post($meta->display_value)
-                                //             );
-                                //         }
-                                //     }
-                                //     echo '</dl>';
-                                // }
+                                $meta_data = $item->get_meta_data();
+                                if (!empty($meta_data)) {
+                                    echo '<dl class="variation">';
+                                    foreach ($meta_data as $meta) {
+                                        // Display annual-revenue and location attributes
+                                        if (in_array($meta->key, ['annual-revenue', 'location'])) {
+                                            $display_key = str_replace('attribute_', '', $meta->key);
+                                            $display_key = ucwords(str_replace('-', ' ', $display_key));
+                                            printf('<dt>%s:</dt><dd>%s</dd>', 
+                                                esc_html($display_key),
+                                                esc_html($meta->value)
+                                            );
+                                        }
+                                    }
+                                    echo '</dl>';
+                                }
                                 ?>
                             </td>
                             <td class="product-total">
