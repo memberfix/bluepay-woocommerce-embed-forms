@@ -4,11 +4,12 @@ jQuery(document).ready(function($) {
         const plan = $('input[name="plan"]:checked').val();
         const revenue = $('input[name="revenue"]:checked').val();
         
+        // Hide button by default when filters change
+        $('#update-subscription-btn, #change-subscription-btn').hide();
+        
         if (plan && revenue) {
             $('#products-container').show();
             updateProducts();
-        } else {
-            $('#products-container').hide();
         }
     }
 
@@ -34,6 +35,9 @@ jQuery(document).ready(function($) {
                     $('#membership-products .product-variations').html(response.data.membership);
                     $('#premium-service-products .product-variations').html(response.data.premium_service);
                     $('#local-chapter-products .product-variations').html(response.data.local_chapter);
+                    
+                    // Show/hide button based on server response
+                    $('#update-subscription-btn, #change-subscription-btn').toggle(response.data.show_button);
                     
                     // Calculate total after updating products
                     calculateTotal();
@@ -120,10 +124,19 @@ jQuery(document).ready(function($) {
         checkAndShowProducts();
     });
     
-    $(document).on('change', '.product-variations input[type="checkbox"]', updateTotal);
-    $(document).on('change', 'input[type="checkbox"]', calculateTotal);
+    $(document).on('change', '.product-variations input[type="checkbox"]', function() {
+        // Only non-membership checkboxes can be changed
+        if (!$(this).closest('#membership-products').length) {
+            updateTotal();
+            calculateTotal();
+        }
+    });
     $('#change-subscription-btn').on('click', updateSubscription);
 
-    // Initial check for selections
+    // Hide buttons initially
+    $('#update-subscription-btn, #change-subscription-btn').hide();
+    
+    // Initial checks
     checkAndShowProducts();
+    updateTotal();
 });

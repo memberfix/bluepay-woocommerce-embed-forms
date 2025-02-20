@@ -10,3 +10,12 @@
     padding: 10px 20px;
     text-decoration: none;
 }
+
+#membership-products .product-variations .variations-list .variation-item input[type="checkbox"] {
+    visibility: hidden !important;
+}
+
+#update-subscription-btn,
+#change-subscription-btn {
+    display: none;
+}

@@ -160,7 +160,7 @@ function mfx_get_current_subscription_details($atts = array()) {
             <div class="subscription-overview">
                 <p class="recurring-total">
                     <span class="label">Recurring:</span>
-                    <span class="value"><?php echo $recurring_period; ?></span>
+                    <span class="value"><?php echo ($recurring_period === 'year') ? 'Annual' : $recurring_period; ?></span>
                 </p>
                 
                 <?php if ($last_payment_date instanceof WC_DateTime): ?>

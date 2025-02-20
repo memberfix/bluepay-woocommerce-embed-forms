@@ -155,6 +155,8 @@ function handle_product_filter() {
     );
     
     $response_data = array();
+    $has_available_products = false; // Track if any products are available
+    $has_selected_filters = !empty($plan) && !empty($revenue); // Check if filters are selected
     
     foreach ($parent_products as $type => $parent_id) {
         $args = array(
@@ -197,6 +199,9 @@ function handle_product_filter() {
                 $products->the_post();
                 $variation = wc_get_product(get_the_ID());
                 $is_membership = ($type === 'membership');
+                
+                // Mark that we found available products
+                $has_available_products = true;
                 ?>
                 <div class="variation-item">
                     <label>
@@ -227,5 +232,9 @@ function handle_product_filter() {
     
     // Add redirect URL to the response
     $response_data['redirect'] = wc_get_account_endpoint_url('mfx-membership');
+    
+    // Only show button if filters are selected AND products are available
+    $response_data['show_button'] = $has_selected_filters && $has_available_products;
+    
     wp_send_json_success($response_data);
 }
