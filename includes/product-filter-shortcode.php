@@ -25,16 +25,52 @@ function product_filter_scripts() {
 function render_product_filter() {
     global $wpdb;
     
-    // Get unique values for plan attribute
+    // Get settings for product IDs
+    $renewal_settings = get_option('mfx_bluepay_renewal_settings', array(
+        'membership_product_id' => 12350,
+        'premium_service_product_id' => 12390,
+        'local_chapter_product_id' => 12428
+    ));
+
+    // Get plan values that exist in all three products
     $plan_values = $wpdb->get_col($wpdb->prepare(
-        "SELECT DISTINCT meta_value 
-        FROM {$wpdb->postmeta} 
-        WHERE meta_key = %s 
-        AND meta_value != ''",
-        'attribute_plan'
+        "SELECT DISTINCT pm1.meta_value
+        FROM {$wpdb->postmeta} pm1
+        WHERE pm1.meta_key = 'attribute_plan'
+        AND pm1.meta_value != ''
+        AND EXISTS (
+            SELECT 1 FROM {$wpdb->postmeta} pm2
+            JOIN {$wpdb->posts} p2 ON p2.ID = pm2.post_id
+            WHERE pm2.meta_key = 'attribute_plan'
+            AND pm2.meta_value = pm1.meta_value
+            AND p2.post_parent = %d
+        )
+        AND EXISTS (
+            SELECT 1 FROM {$wpdb->postmeta} pm3
+            JOIN {$wpdb->posts} p3 ON p3.ID = pm3.post_id
+            WHERE pm3.meta_key = 'attribute_plan'
+            AND pm3.meta_value = pm1.meta_value
+            AND p3.post_parent = %d
+        )
+        AND EXISTS (
+            SELECT 1 FROM {$wpdb->postmeta} pm4
+            JOIN {$wpdb->posts} p4 ON p4.ID = pm4.post_id
+            WHERE pm4.meta_key = 'attribute_plan'
+            AND pm4.meta_value = pm1.meta_value
+            AND p4.post_parent = %d
+        )",
+        $renewal_settings['membership_product_id'],
+        $renewal_settings['premium_service_product_id'],
+        $renewal_settings['local_chapter_product_id']
     ));
     
-    // Get unique values for annual revenue attribute (only from membership product)
+    // Get settings
+    $renewal_settings = get_option('mfx_bluepay_renewal_settings', array(
+        'membership_product_id' => 12350,
+        'revenue_source_product_id' => 12350
+    ));
+
+    // Get unique values for annual revenue attribute (only from configured product)
     $revenue_values = $wpdb->get_col($wpdb->prepare(
         "SELECT DISTINCT pm1.meta_value 
         FROM {$wpdb->postmeta} pm1
@@ -49,7 +85,7 @@ function render_product_filter() {
             WHERE post_parent = %d
         )",
         'attribute_annual-revenue',
-        12350 // Membership product ID
+        $renewal_settings['revenue_source_product_id']
     ));
     
     // Get unique values for available-for-renewal attribute
@@ -148,10 +184,17 @@ function handle_product_filter() {
     $plan = isset($_POST['plan']) ? sanitize_text_field($_POST['plan']) : '';
     $revenue = isset($_POST['revenue']) ? sanitize_text_field($_POST['revenue']) : '';
     
+    // Get parent product IDs from settings
+    $renewal_settings = get_option('mfx_bluepay_renewal_settings', array(
+        'membership_product_id' => 12350,
+        'premium_service_product_id' => 12390,
+        'local_chapter_product_id' => 12428
+    ));
+
     $parent_products = array(
-        'membership' => 12350,
-        'premium_service' => 12390,
-        'local_chapter' => 12428
+        'membership' => $renewal_settings['membership_product_id'],
+        'premium_service' => $renewal_settings['premium_service_product_id'],
+        'local_chapter' => $renewal_settings['local_chapter_product_id']
     );
     
     $response_data = array();

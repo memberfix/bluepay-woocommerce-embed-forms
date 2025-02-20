@@ -50,6 +50,7 @@ function get_available_product_attributes() {
 
 // Register settings
 function bluepay_register_settings() {
+    // BluePay Embed Form settings
     register_setting('bluepay_settings_group', 'bluepay_merchant_id');
     register_setting('bluepay_settings_group', 'bluepay_tamper_proof_seal');
     register_setting('bluepay_settings_group', 'bluepay_approved_url');
@@ -61,15 +62,52 @@ function bluepay_register_settings() {
     register_setting('bluepay_settings_group', 'bluepay_sent_to_email_subject');
     register_setting('bluepay_settings_group', 'bluepay_sent_to_email_body');
     register_setting('bluepay_settings_group', 'renewal_form_page_url');
+
+    // Renewal/Upgrade Form settings
+    register_setting('bluepay_renewal_settings_group', 'mfx_bluepay_renewal_settings', array(
+        'type' => 'array',
+        'sanitize_callback' => 'bluepay_sanitize_renewal_settings'
+    ));
+}
+
+// Sanitize renewal settings
+function bluepay_sanitize_renewal_settings($input) {
+    $sanitized = array();
+    
+    // Sanitize product IDs
+    $sanitized['membership_product_id'] = absint($input['membership_product_id']);
+    $sanitized['premium_service_product_id'] = absint($input['premium_service_product_id']);
+    $sanitized['local_chapter_product_id'] = absint($input['local_chapter_product_id']);
+    $sanitized['revenue_source_product_id'] = absint($input['revenue_source_product_id']);
+    
+    // Sanitize description
+    $sanitized['form_description'] = wp_kses_post($input['form_description']);
+    
+    return $sanitized;
 }
 
 
 // Render the settings page
 function render_bluepay_settings_page() {
+    $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'embed_form';
+    $renewal_settings = get_option('mfx_bluepay_renewal_settings', array(
+        'membership_product_id' => 12350,
+        'premium_service_product_id' => 12390,
+        'local_chapter_product_id' => 12428,
+        'revenue_source_product_id' => 12350,
+        'form_description' => ''
+    ));
     ?>
     <div class="wrap">
         <h1>BluePay Settings</h1>
+        
+        <h2 class="nav-tab-wrapper">
+            <a href="?page=bluepay-settings&tab=embed_form" class="nav-tab <?php echo $active_tab == 'embed_form' ? 'nav-tab-active' : ''; ?>">BluePay Embed Form</a>
+            <a href="?page=bluepay-settings&tab=renewal_form" class="nav-tab <?php echo $active_tab == 'renewal_form' ? 'nav-tab-active' : ''; ?>">Renewal/Upgrade Form</a>
+        </h2>
+
         <form method="post" action="options.php">
+        <?php if ($active_tab == 'embed_form'): ?>
             <?php
             settings_fields('bluepay_settings_group');
             do_settings_sections('bluepay_settings_group');
@@ -140,6 +178,66 @@ function render_bluepay_settings_page() {
             </table>
 
             <?php submit_button(); ?>
+        <?php else: // Renewal Form Settings ?>
+            <?php
+            settings_fields('bluepay_renewal_settings_group');
+            ?>
+            <table class="form-table">
+                <tr>
+                    <th scope="row" colspan="2">
+                        <h3>Parent Product Configuration</h3>
+                        <p class="description">Configure the parent products for different membership types. These products should be variable products in WooCommerce.</p>
+                    </th>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="membership_product_id">Membership Product ID</label></th>
+                    <td>
+                        <input type="number" name="mfx_bluepay_renewal_settings[membership_product_id]" id="membership_product_id" value="<?php echo esc_attr($renewal_settings['membership_product_id']); ?>" class="regular-text">
+                        <p class="description">The ID of the main membership product that contains membership variations.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="premium_service_product_id">Premium Service Product ID</label></th>
+                    <td>
+                        <input type="number" name="mfx_bluepay_renewal_settings[premium_service_product_id]" id="premium_service_product_id" value="<?php echo esc_attr($renewal_settings['premium_service_product_id']); ?>" class="regular-text">
+                        <p class="description">The ID of the premium service product that contains service variations.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="local_chapter_product_id">Local Chapter Product ID</label></th>
+                    <td>
+                        <input type="number" name="mfx_bluepay_renewal_settings[local_chapter_product_id]" id="local_chapter_product_id" value="<?php echo esc_attr($renewal_settings['local_chapter_product_id']); ?>" class="regular-text">
+                        <p class="description">The ID of the local chapter product that contains chapter variations.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="revenue_source_product_id">Revenue Filter Product ID</label></th>
+                    <td>
+                        <input type="number" name="mfx_bluepay_renewal_settings[revenue_source_product_id]" id="revenue_source_product_id" value="<?php echo esc_attr($renewal_settings['revenue_source_product_id']); ?>" class="regular-text">
+                        <p class="description">The product ID used to fetch available revenue values for filtering. This is typically the same as the Membership Product ID.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="form_description">Form Description</label></th>
+                    <td>
+                        <?php
+                        wp_editor(
+                            $renewal_settings['form_description'],
+                            'form_description',
+                            array(
+                                'textarea_name' => 'mfx_bluepay_renewal_settings[form_description]',
+                                'textarea_rows' => 10,
+                                'media_buttons' => false,
+                                'teeny' => true,
+                            )
+                        );
+                        ?>
+                        <p class="description">Description of how the renewal/upgrade form works. This will be shown to administrators only.</p>
+                    </td>
+                </tr>
+            </table>
+            <?php submit_button(); ?>
+        <?php endif; ?>
         </form>
     </div>
     <?php
