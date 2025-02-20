@@ -1,0 +1,21 @@
+.woocommerce-memberships-current,
+.woocommerce-memberships-change {
+    margin: 20px 0;
+}
+
+.woocommerce-memberships-change .button,
+.woocommerce-memberships-current .button {
+    margin: 10px 0;
+    display: inline-block;
+    padding: 10px 20px;
+    text-decoration: none;
+}
+
+#membership-products .product-variations .variations-list .variation-item input[type="checkbox"] {
+    opacity: 0.3 !important;
+}
+
+#update-subscription-btn,
+#change-subscription-btn {
+    display: none;
+}
