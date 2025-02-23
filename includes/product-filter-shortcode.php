@@ -70,11 +70,12 @@ function render_product_filter() {
         'revenue_source_product_id' => 12350
     ));
 
-    // Get unique values for annual revenue attribute (only from configured product)
-    $revenue_values = $wpdb->get_col($wpdb->prepare(
-        "SELECT DISTINCT pm1.meta_value 
+    // Get revenue values with their sorting numbers
+    $revenue_values = $wpdb->get_results($wpdb->prepare(
+        "SELECT DISTINCT pm1.meta_value as revenue, COALESCE(pm_sort.meta_value, '999999') as sort_order 
         FROM {$wpdb->postmeta} pm1
         JOIN {$wpdb->postmeta} pm2 ON pm1.post_id = pm2.post_id
+        LEFT JOIN {$wpdb->postmeta} pm_sort ON pm1.post_id = pm_sort.post_id AND pm_sort.meta_key = 'attribute_sorting-number'
         WHERE pm1.meta_key = %s 
         AND pm1.meta_value != ''
         AND pm2.meta_key = 'attribute_renewal'
@@ -83,7 +84,8 @@ function render_product_filter() {
             SELECT ID 
             FROM {$wpdb->posts} 
             WHERE post_parent = %d
-        )",
+        )
+        ORDER BY CAST(COALESCE(pm_sort.meta_value, '999999') AS SIGNED) ASC",
         'attribute_annual-revenue',
         $renewal_settings['revenue_source_product_id']
     ));
@@ -113,10 +115,10 @@ function render_product_filter() {
             <div class="filter-group">
                 <h4>Select Annual Revenue</h4>
                 <div class="radio-group" id="revenue-filters">
-                    <?php foreach ($revenue_values as $revenue) : ?>
+                    <?php foreach ($revenue_values as $revenue_obj) : ?>
                         <label>
-                            <input type="radio" name="revenue" value="<?php echo esc_attr($revenue); ?>">
-                            <?php echo esc_html($revenue); ?>
+                            <input type="radio" name="revenue" value="<?php echo esc_attr($revenue_obj->revenue); ?>" data-sort="<?php echo esc_attr($revenue_obj->sort_order); ?>">
+                            <?php echo esc_html($revenue_obj->revenue); ?>
                         </label>
                     <?php endforeach; ?>
                 </div>

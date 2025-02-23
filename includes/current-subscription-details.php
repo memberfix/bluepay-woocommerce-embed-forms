@@ -134,12 +134,17 @@ function mfx_get_current_subscription_details($atts = array()) {
         $recurring_amount = $subscription->get_total();
         
         // Format recurring period text
-        $recurring_period = sprintf(
-            '%s%s %s',
-            $billing_interval > 1 ? $billing_interval . ' ' : '',
-            $billing_interval > 1 ? $billing_period . 's' : $billing_period,
-            wc_price($recurring_amount)
-        );
+        $period_text = '';
+        if ($billing_period === 'year') {
+            $period_text = $billing_interval > 1 ? $billing_interval . ' years' : 'annually';
+        } else {
+            $period_text = sprintf(
+                '%s%s',
+                $billing_interval > 1 ? $billing_interval . ' ' : '',
+                $billing_interval > 1 ? $billing_period . 's' : $billing_period
+            );
+        }
+        $recurring_period = $period_text . ' ' . wc_price($recurring_amount);
         
         ?>
         <div class="subscription-info" data-subscription-id="<?php echo esc_attr($subscription_id); ?>">

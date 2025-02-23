@@ -19,13 +19,30 @@ function bluepay_gateway_order_confirmation_shortcode() {
     // Prepare order items and details
     $order_items = '';
     foreach ($order->get_items() as $item) {
+        $product = $item->get_product();
+        $variation_data = '';
+        
+        if ($product && $product->is_type('variation')) {
+            $variation_attributes = $item->get_meta_data();
+            foreach ($variation_attributes as $meta) {
+                $data = $meta->get_data();
+                if (in_array($data['key'], ['annual-revenue', 'plan', 'location'])) {
+                    $variation_data .= sprintf('<br><strong>%s:</strong> %s',
+                        esc_html(ucfirst(str_replace('_', ' ', $data['key']))),
+                        esc_html($data['value'])
+                    );
+                }
+            }
+        }
+        
         $order_items .= sprintf(
             '<tr>
-                <td>%s</td>
+                <td>%s%s</td>
                 <td>%d</td>
                 <td>%s</td>
             </tr>',
             esc_html($item->get_name()),
+            $variation_data,
             intval($item->get_quantity()),
             wc_price($item->get_total())
         );
@@ -182,7 +199,7 @@ function bluepay_gateway_order_confirmation_shortcode() {
             <p>Or copy the payment link:</p>
             <div class="payment-link-copy-block">
                 <div class="payment-link" id="payment_link_string">
-                    <?php echo $_SERVER['HTTP_HOST']; ?>/form-bluepay?order_id=<?php echo esc_attr($order_id); ?>
+                    <?php echo esc_url(site_url('/form-bluepay?order_id=' . esc_attr($order_id))); ?>
                 </div>
                 <button id="payment_link_copy_btn" class="elementor-button elementor-button-link elementor-size-sm"
                     title="Click to copy the payment link">

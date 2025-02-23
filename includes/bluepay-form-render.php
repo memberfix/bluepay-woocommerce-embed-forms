@@ -425,7 +425,7 @@ function render_bluepay_form($atts) {
 
 <div class="flex-container">
     <input type="tel" id="CC_EXPIRES" name="CC_EXPIRES" placeholder="MM/YY" maxlength="5"
-        oninput="formatExpiryDate(this)" required>
+    onkeyup="formatExpiryDate(event)" required>
     <input type="tel" id="CVCCVV2" name="CVCCVV2" placeholder="CVV" maxlength="3" required>
 </div>
 

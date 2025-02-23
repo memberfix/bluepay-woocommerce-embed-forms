@@ -36,7 +36,7 @@ input[type="email"],
 input[type="tel"],
 
 .product-filter-container {
-    display: flex !important;
+    display: flex;
 }
 .filter-section {
     display: flex !important;
@@ -50,10 +50,7 @@ input[type="tel"],
 .select-input {
     width: 100%;
     padding: 10px;
-    margin-bottom: 15px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 14px;
+    color: var(--e-global-color-text);
 }
 
 .select-input {
@@ -63,17 +60,20 @@ input[type="tel"],
 .flex-container {
     display: flex;
     gap: 10px;
+    margin: 10px 0;
 }
 
 .flex-container input,
 .flex-container .select-input {
     flex: 1;
+    height: 54px;
 }
 
 .credit-card-icons {
     display: flex;
     gap: 10px;
     margin-bottom: 15px;
+    flex-wrap: wrap;
 }
 
 .credit-card-icons img {
