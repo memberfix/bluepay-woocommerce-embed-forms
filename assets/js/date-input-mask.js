@@ -24,19 +24,57 @@ function formatExpiryDate(e) {
     );
 }
 
-// Replacing Inputs if selected country is not USA
-const stateSelectInput = document.querySelector('.state-select-input');
-const stateTextInput = document.querySelector('.state-text-input');
-const countryInput = document.getElementById('COUNTRY');
+// Handle State/Region field based on country selection
+document.addEventListener('DOMContentLoaded', function() {
+    const stateSelectInput = document.getElementById('STATE_SELECT');
+    const stateTextInput = document.getElementById('STATE_TEXT');
+    const countryInput = document.getElementById('COUNTRY');
+    const form = document.getElementById('bluepay-payment-form');
 
-stateTextInput.style.display = 'none';
+    if (!stateSelectInput || !stateTextInput || !countryInput || !form) {
+        console.error('Required form elements not found');
+        return;
+    }
 
-countryInput.addEventListener('change', () => {
-    if (countryInput.value !== 'United States') {
-        stateSelectInput.style.display = 'none';
-        stateTextInput.style.display = 'block';
-    } else {
-        stateTextInput.style.display = 'none';
-        stateSelectInput.style.display = 'block';
+    // Initial state
+    updateStateFields(countryInput.value);
+
+    // Handle country changes
+    countryInput.addEventListener('change', () => {
+        updateStateFields(countryInput.value);
+    });
+
+    // Handle form submission
+    form.addEventListener('submit', function(e) {
+        const isUS = countryInput.value === 'United States';
+        
+        // Clear the value of the hidden input
+        if (isUS) {
+            stateTextInput.value = '';
+            if (!stateSelectInput.value) {
+                e.preventDefault();
+                alert('Please select a state');
+            }
+        } else {
+            stateSelectInput.value = '';
+            if (!stateTextInput.value.trim()) {
+                e.preventDefault();
+                alert('Please enter your region/state');
+            }
+        }
+    });
+
+    function updateStateFields(country) {
+        const isUS = country === 'United States';
+        stateSelectInput.style.display = isUS ? 'block' : 'none';
+        stateTextInput.style.display = isUS ? 'none' : 'block';
+        
+        // Update required attributes
+        stateSelectInput.required = isUS;
+        stateTextInput.required = !isUS;
+        
+        // Clear values when switching
+        stateSelectInput.value = isUS ? stateSelectInput.value : '';
+        stateTextInput.value = !isUS ? stateTextInput.value : '';
     }
 });

@@ -97,7 +97,7 @@ function render_bluepay_form($atts) {
 
 <div class="flex-container">
     <input type="text" id="CITY" name="CITY" placeholder="Town / City" required>
-    <select id="STATE" name="STATE" class="select-input state-select-input">
+    <select id="STATE_SELECT" name="STATE" class="select-input state-select-input">
         <option value="AL">AL</option>
         <option value="AK">AK</option>
         <option value="AR">AR</option>
@@ -156,7 +156,7 @@ function render_bluepay_form($atts) {
         <option value="UM">UM</option>
         <option value="VI">VI</option>
     </select>
-    <input type="text" id="STATE" name="STATE" class="state-text-input" placeholder="County / Region"
+    <input type="text" id="STATE_TEXT" name="STATE" class="state-text-input" placeholder="County / Region"
         required>
 </div>
 
