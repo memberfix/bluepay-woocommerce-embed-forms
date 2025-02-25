@@ -409,8 +409,7 @@ function render_bluepay_form($atts) {
 <!-- Payment Information Section -->
 <h3>Payment Information</h3>
 
-<div class="credit-card-icons">
-  <label for="CC_NUM">Credit Card (BluePay)</label>
+
 
 <div class="credit-card-icons">
     <label for="CC_NUM">Credit Card (BluePay)</label>
@@ -419,7 +418,7 @@ function render_bluepay_form($atts) {
     <img src="<?php echo esc_url($base_url . 'amex.svg'); ?>" alt="American Express">
     <img src="<?php echo esc_url($base_url . 'discover.svg'); ?>" alt="Discover">
 </div>
-</div>
+
 
  <input type="tel" inputmode="numeric" pattern="[0-9\s]{13,19}" autocomplete="cc-number" maxlength="19" placeholder="xxxx xxxx xxxx xxxx"  id="CC_NUM" name="CC_NUM" required>
 
