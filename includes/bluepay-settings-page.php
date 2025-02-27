@@ -68,6 +68,13 @@ function bluepay_register_settings() {
         'type' => 'array',
         'sanitize_callback' => 'bluepay_sanitize_renewal_settings'
     ));
+
+    // Team Name settings
+    register_setting('mfx_bluepay_team_name_settings', 'mfx_bluepay_team_name_settings', array(
+        'type' => 'array',
+        'sanitize_callback' => 'bluepay_sanitize_team_name_settings',
+        'default' => array('enable_team_name_billing' => 1)
+    ));
 }
 
 // Sanitize renewal settings
@@ -88,6 +95,12 @@ function bluepay_sanitize_renewal_settings($input) {
 
 
 // Render the settings page
+function bluepay_sanitize_team_name_settings($input) {
+    $sanitized = array();
+    $sanitized['enable_team_name_billing'] = isset($input['enable_team_name_billing']) ? 1 : 0;
+    return $sanitized;
+}
+
 function render_bluepay_settings_page() {
     $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'embed_form';
     $renewal_settings = get_option('mfx_bluepay_renewal_settings', array(
@@ -97,6 +110,9 @@ function render_bluepay_settings_page() {
         'revenue_source_product_id' => 12350,
         'form_description' => ''
     ));
+    $team_name_settings = get_option('mfx_bluepay_team_name_settings', array(
+        'enable_team_name_billing' => 1 // Enabled by default
+    ));
     ?>
     <div class="wrap">
         <h1>BluePay Settings</h1>
@@ -104,6 +120,7 @@ function render_bluepay_settings_page() {
         <h2 class="nav-tab-wrapper">
             <a href="?page=bluepay-settings&tab=embed_form" class="nav-tab <?php echo $active_tab == 'embed_form' ? 'nav-tab-active' : ''; ?>">BluePay Embed Form</a>
             <a href="?page=bluepay-settings&tab=renewal_form" class="nav-tab <?php echo $active_tab == 'renewal_form' ? 'nav-tab-active' : ''; ?>">Renewal/Upgrade Form</a>
+            <a href="?page=bluepay-settings&tab=team_name" class="nav-tab <?php echo $active_tab == 'team_name' ? 'nav-tab-active' : ''; ?>">Team Name</a>
         </h2>
 
         <form method="post" action="options.php">
@@ -178,7 +195,9 @@ function render_bluepay_settings_page() {
             </table>
 
             <?php submit_button(); ?>
-        <?php else: // Renewal Form Settings ?>
+        <?php endif; ?>
+
+        <?php if ($active_tab == 'renewal_form'): ?>
             <?php
             settings_fields('bluepay_renewal_settings_group');
             ?>
@@ -233,6 +252,33 @@ function render_bluepay_settings_page() {
                         );
                         ?>
                         <p class="description">Description of how the renewal/upgrade form works. This will be shown to administrators only.</p>
+                    </td>
+                </tr>
+            </table>
+            <?php submit_button(); ?>
+        <?php endif; ?>
+
+        <?php if ($active_tab == 'team_name'): ?>
+            <?php settings_fields('mfx_bluepay_team_name_settings'); ?>
+            <div class="team-name-settings-info">
+                <h3>Team Name Billing Company Settings</h3>
+                <p class="description" style="margin-bottom: 20px;">
+                    This feature automatically sets the billing company field based on the user's team name. Here's how it works:
+                </p>
+                <ul style="list-style-type: disc; margin-left: 20px; margin-bottom: 20px;">
+                    <li>When enabled, the system will check if an order's billing company field is empty</li>
+                    <li>If empty, it will automatically set the billing company to the user's team name</li>
+                    <li>This applies to both orders and their associated subscriptions</li>
+                    <li>If a billing company is already set (manually entered during checkout), it will be preserved</li>
+                    <li>This ensures team names are consistently used across orders and subscriptions when no other billing company is specified</li>
+                </ul>
+            </div>
+            <table class="form-table">
+                <tr>
+                    <th scope="row"><label for="enable_team_name_billing">Enable Team Name as Billing Company</label></th>
+                    <td>
+                        <input type="checkbox" name="mfx_bluepay_team_name_settings[enable_team_name_billing]" id="enable_team_name_billing" value="1" <?php checked(1, $team_name_settings['enable_team_name_billing']); ?>>
+                        <p class="description">When enabled, empty billing company fields will be automatically filled with the user's team name.</p>
                     </td>
                 </tr>
             </table>

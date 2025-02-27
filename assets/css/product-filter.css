@@ -159,3 +159,7 @@
 #update-subscription-btn.warning {
     border: 2px solid red !important;
 }
+
+#membership-products .product-variations input[type="checkbox"] {
+    opacity: 0.3 !important;
+}

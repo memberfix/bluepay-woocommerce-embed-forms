@@ -94,3 +94,7 @@ button {
 button:hover {
     background-color: #45a049;
 }
+
+#membership-products .product-variations input[type="checkbox"] {
+    opacity: 0.3 !important;
+}

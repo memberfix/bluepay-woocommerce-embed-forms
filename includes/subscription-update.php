@@ -267,7 +267,7 @@ function mfx_update_failed_order_items($order, $selected_variations, $team_data)
 
 function mfx_update_subscription_recurring_period($subscription, $selected_plan) {
     try {
-        error_log("Starting subscription period update with plan: " . print_r($selected_plan, true));
+        //error_log("Starting subscription period update with plan: " . print_r($selected_plan, true));
         
         // Convert plan to lowercase and trim for consistency
         $selected_plan = strtolower(trim($selected_plan));
@@ -384,6 +384,8 @@ function mfx_update_subscription_recurring_period($subscription, $selected_plan)
     }
 }
 
+
+
 /**
  * Update subscription next payment date based on new billing period and interval
  * 
@@ -475,3 +477,118 @@ function mfx_update_subscription_next_payment($subscription, $new_period, $new_i
 
 // Hook AJAX actions
 add_action('wp_ajax_mfx_update_subscription', 'mfx_process_subscription_update');
+
+
+
+/**
+ * Update subscription billing company from related order
+ *
+ * @param WC_Subscription $subscription The subscription object
+ * @return void
+ */
+function mfx_update_subscription_billing_company($subscription) {
+    error_log('BluePay Debug: mfx_update_subscription_billing_company');
+    if (!$subscription || !is_a($subscription, 'WC_Subscription')) {
+        error_log('BluePay Debug: Invalid subscription object');
+        return;
+    }
+
+    $subscription_id = $subscription->get_id();
+    $current_company = $subscription->get_billing_company();
+    error_log("BluePay Debug: Processing subscription #{$subscription_id} - Current billing company: {$current_company}");
+
+    // Get the related order
+    $order_id = $subscription->get_last_order();
+    if (!$order_id) {
+        error_log("BluePay Debug: No last order found for subscription #{$subscription_id}");
+        return;
+    }
+
+    $order = wc_get_order($order_id);
+    if (!$order) {
+        error_log("BluePay Debug: Could not load order #{$order_id} for subscription #{$subscription_id}");
+        return;
+    }
+
+    $billing_company = $order->get_billing_company();
+    error_log("BluePay Debug: Order #{$order_id} billing company: {$billing_company}");
+
+    if (!empty($billing_company)) {
+        try {
+            // Try multiple methods to ensure the billing company is set
+            $subscription->set_billing_company($billing_company);
+            
+            // Also update using meta data directly
+            update_post_meta($subscription_id, '_billing_company', $billing_company);
+            
+            // Force a save
+            $subscription->save();
+            
+            // Verify the save worked
+            $subscription = wcs_get_subscription($subscription_id);
+            $saved_company = $subscription->get_billing_company();
+            error_log("BluePay Debug: Verification - Subscription #{$subscription_id} billing company after save: {$saved_company}");
+            
+            if ($saved_company !== $billing_company) {
+                error_log("BluePay Warning: Billing company mismatch after save. Expected: {$billing_company}, Got: {$saved_company}");
+                // Try one more time with direct DB update
+                global $wpdb;
+                $wpdb->update(
+                    $wpdb->postmeta,
+                    array('meta_value' => $billing_company),
+                    array('post_id' => $subscription_id, 'meta_key' => '_billing_company')
+                );
+            }
+            
+            error_log("BluePay Debug: Updated subscription #{$subscription_id} billing company to: {$billing_company}");
+        } catch (Exception $e) {
+            error_log("BluePay Error: Failed to update subscription #{$subscription_id} billing company: " . $e->getMessage());
+        }
+    }
+}
+
+/**
+ * Handle subscriptions created for an order
+ *
+ * @param WC_Order $order The order for which subscriptions have been created
+ */
+function mfx_handle_subscriptions_created($order) {
+    error_log('BluePay Debug: mfx_handle_subscriptions_created');
+
+    if (!$order || !is_a($order, 'WC_Order')) {
+        error_log('BluePay Debug: Invalid order object');
+        return;
+    }
+
+    $order_id = $order->get_id();
+    error_log("BluePay Debug: Processing subscriptions for order #{$order_id}");
+
+    // Get all subscriptions for this order
+    $subscriptions = wcs_get_subscriptions_for_order($order_id);
+    
+    if (empty($subscriptions)) {
+        error_log("BluePay Debug: No subscriptions found for order #{$order_id}");
+        return;
+    }
+
+    foreach ($subscriptions as $subscription) {
+        mfx_update_subscription_billing_company($subscription);
+    }
+}
+
+/**
+ * Handle subscription status changes
+ *
+ * @param WC_Subscription $subscription The subscription object
+ */
+function mfx_handle_subscription_status_change($subscription) {
+    error_log('BluePay Debug: mfx_handle_subscription_status_change');
+    error_log('BluePay Debug: Subscription #' . $subscription->get_id() . ' status changed to: ' . $subscription->get_status());
+    mfx_update_subscription_billing_company($subscription);
+}
+
+// Hook into various subscription events
+add_action('subscriptions_created_for_order', 'mfx_handle_subscriptions_created', 10, 2);
+add_action('woocommerce_subscription_status_updated', 'mfx_handle_subscription_status_change', 10, 1);
+add_action('woocommerce_subscription_payment_complete', 'mfx_handle_subscription_status_change', 10, 1);
+
