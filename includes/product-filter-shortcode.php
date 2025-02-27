@@ -70,22 +70,19 @@ function render_product_filter() {
         'revenue_source_product_id' => 12350
     ));
 
-    // Get revenue values with their sorting numbers
+    // Get revenue values ordered by menu_order
     $revenue_values = $wpdb->get_results($wpdb->prepare(
-        "SELECT DISTINCT pm1.meta_value as revenue, COALESCE(pm_sort.meta_value, '999999') as sort_order 
+        "SELECT DISTINCT pm1.meta_value as revenue, MIN(p.menu_order) as sort_order 
         FROM {$wpdb->postmeta} pm1
         JOIN {$wpdb->postmeta} pm2 ON pm1.post_id = pm2.post_id
-        LEFT JOIN {$wpdb->postmeta} pm_sort ON pm1.post_id = pm_sort.post_id AND pm_sort.meta_key = 'attribute_sorting-number'
+        JOIN {$wpdb->posts} p ON pm1.post_id = p.ID
         WHERE pm1.meta_key = %s 
         AND pm1.meta_value != ''
         AND pm2.meta_key = 'attribute_renewal'
         AND pm2.meta_value = 'Yes'
-        AND pm1.post_id IN (
-            SELECT ID 
-            FROM {$wpdb->posts} 
-            WHERE post_parent = %d
-        )
-        ORDER BY CAST(COALESCE(pm_sort.meta_value, '999999') AS SIGNED) ASC",
+        AND p.post_parent = %d
+        GROUP BY pm1.meta_value
+        ORDER BY sort_order ASC",
         'attribute_annual-revenue',
         $renewal_settings['revenue_source_product_id']
     ));
