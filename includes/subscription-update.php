@@ -587,6 +587,39 @@ function mfx_handle_subscription_status_change($subscription) {
     mfx_update_subscription_billing_company($subscription);
 }
 
+function mfx_get_team_name_by_user_id($user_id) {
+    global $wpdb;
+
+//     // Debug: Display the user ID being searched
+//     echo "Searching for user ID: {$user_id}<br>";
+
+    // Prepare the query to find a team where the user is either the author or in _member_id meta
+    $query = $wpdb->prepare(
+        "SELECT p.post_title 
+        FROM {$wpdb->posts} p
+        LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_member_id'
+        WHERE p.post_type = %s 
+          AND p.post_status = %s
+          AND (p.post_author = %d OR pm.meta_value = %d)
+        LIMIT 1",
+        'wc_memberships_team',  // Post type
+        'publish',              // Post status
+        $user_id,               // User ID for author check
+        $user_id                // User ID for meta check
+    );
+
+    $team_name = $wpdb->get_var($query);
+
+    if ($team_name) {
+//         echo "Team found: {$team_name}<br>";
+    } else {
+//         echo "No team found for user ID: {$user_id}<br>";
+    }
+
+    return $team_name ? $team_name : null;
+}
+
+
 // Hook into various subscription events
 add_action('subscriptions_created_for_order', 'mfx_handle_subscriptions_created', 10, 2);
 add_action('woocommerce_subscription_status_updated', 'mfx_handle_subscription_status_change', 10, 1);
