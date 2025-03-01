@@ -86,6 +86,7 @@ function bluepay_sanitize_renewal_settings($input) {
     $sanitized['premium_service_product_id'] = absint($input['premium_service_product_id']);
     $sanitized['local_chapter_product_id'] = absint($input['local_chapter_product_id']);
     $sanitized['revenue_source_product_id'] = absint($input['revenue_source_product_id']);
+    $sanitized['supplier_product_id'] = absint($input['supplier_product_id']);
     
     // Sanitize description
     $sanitized['form_description'] = wp_kses_post($input['form_description']);
@@ -108,6 +109,7 @@ function render_bluepay_settings_page() {
         'premium_service_product_id' => 12390,
         'local_chapter_product_id' => 12428,
         'revenue_source_product_id' => 12350,
+        'supplier_product_id' => 12386,
         'form_description' => ''
     ));
     $team_name_settings = get_option('mfx_bluepay_team_name_settings', array(
@@ -234,6 +236,13 @@ function render_bluepay_settings_page() {
                     <td>
                         <input type="number" name="mfx_bluepay_renewal_settings[revenue_source_product_id]" id="revenue_source_product_id" value="<?php echo esc_attr($renewal_settings['revenue_source_product_id']); ?>" class="regular-text">
                         <p class="description">The product ID used to fetch available revenue values for filtering. This is typically the same as the Membership Product ID.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="supplier_product_id">Supplier Product ID</label></th>
+                    <td>
+                        <input type="number" name="mfx_bluepay_renewal_settings[supplier_product_id]" id="supplier_product_id" value="<?php echo esc_attr($renewal_settings['supplier_product_id']); ?>" class="regular-text">
+                        <p class="description">The ID of the supplier product that contains supplier variations.</p>
                     </td>
                 </tr>
                 <tr>

@@ -163,3 +163,6 @@
 #membership-products .product-variations input[type="checkbox"] {
     opacity: 0.3 !important;
 }
+.product-variations .variations-list .variation-item input[type="checkbox"] {
+    opacity: 0.3 !important;
+}
