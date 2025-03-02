@@ -30,6 +30,7 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/get_guest_invoice_button.ph
 require_once plugin_dir_path( __FILE__ ) . 'includes/product-filter-shortcode.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/myaccount-wc-tab.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/bluepay-order-update.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/renewal-form.php';
 
 // Enqueue subscription update script
 function mfx_enqueue_subscription_update_scripts() {
@@ -48,6 +49,33 @@ function mfx_enqueue_subscription_update_scripts() {
 }
 add_action('wp_enqueue_scripts', 'mfx_enqueue_subscription_update_scripts');
 
+// Function to update Change My Membership page content
+function mfx_update_change_membership_page() {
+    $page = get_page_by_path('change-my-membership');
+    
+    if (!empty($page)) {
+        // Check if the page content already contains the renewal form shortcode
+        if (strpos($page->post_content, '[mfx_renewal_form]') === false) {
+            // Add the renewal form shortcode to the page content
+            $updated_content = $page->post_content;
+            
+            // If the page only has the product filter shortcode, add the renewal form after it
+            if (trim($updated_content) === '[product_filter]') {
+                $updated_content = "[product_filter]\n\n<h3>Renew Your Subscription</h3>\n[mfx_renewal_form]";
+            } else {
+                // Otherwise append it to the end
+                $updated_content .= "\n\n<h3>Renew Your Subscription</h3>\n[mfx_renewal_form]";
+            }
+            
+            // Update the page
+            wp_update_post(array(
+                'ID' => $page->ID,
+                'post_content' => $updated_content
+            ));
+        }
+    }
+}
+
 // Plugin activation hook
 function mfx_bluepay_activate() {
     // Create Change Membership page if it doesn't exist
@@ -57,7 +85,10 @@ function mfx_bluepay_activate() {
         $page_data = array(
             'post_title'    => 'Change My Membership',
             'post_name'     => 'change-my-membership',
-            'post_content'  => '[product_filter]',
+            'post_content'  => '[product_filter]
+
+<h3>Renew Your Subscription</h3>
+[mfx_renewal_form]',
             'post_status'   => 'publish',
             'post_type'     => 'page',
             'post_author'   => 1
@@ -76,6 +107,9 @@ function mfx_bluepay_activate() {
     } else {
         // Update existing page URL in settings
         update_option('renewal_form_page_url', get_permalink($page->ID));
+        
+        // Update the page content to include the renewal form shortcode
+        mfx_update_change_membership_page();
     }
 }
 
@@ -87,3 +121,20 @@ function mfx_bluepay_deactivate() {
 }
 
 register_deactivation_hook( __FILE__, 'mfx_bluepay_deactivate' );
+
+// Run updates when plugin is loaded (for existing installations)
+add_action('plugins_loaded', 'mfx_bluepay_run_updates');
+
+function mfx_bluepay_run_updates() {
+    // Get current plugin version
+    $current_version = get_option('mfx_bluepay_version', '0');
+    
+    // If this is a new installation or an update
+    if (version_compare($current_version, '1.0.6.8', '<')) {
+        // Update the Change Membership page with the renewal form shortcode
+        mfx_update_change_membership_page();
+        
+        // Update the stored version number
+        update_option('mfx_bluepay_version', '1.0.6.8');
+    }
+}

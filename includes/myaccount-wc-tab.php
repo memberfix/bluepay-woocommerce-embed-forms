@@ -24,6 +24,11 @@ function memberships_tab_content() {
         <div>
             <a href="<?php echo esc_url(get_option('renewal_form_page_url', '/change-my-membership')); ?>" class="elementor-button elementor-button-link elementor-size-sm" style="margin-top: 1rem;">Change Membership</a>
         </div>
+        
+        <div class="mfx-renewal-form-container" style="margin-top: 2rem;">
+            <h3>Renewal Form</h3>
+            <?php echo do_shortcode('[mfx_renewal_form]'); ?>
+        </div>
         <?php
 
 
