@@ -216,7 +216,7 @@
             $form.append($totalSection);
             
             // Add submit button
-            const $submitButton = $('<button type="button" id="process-selected-variations" class="button">Process Selected Items</button>');
+            const $submitButton = $('<button type="button" id="process-selected-variations" class="button">Update Subscription</button>');
             $form.append($submitButton);
             
             // Add the form to the matching products section
@@ -278,6 +278,14 @@
                 return;
             }
             
+            // Get the subscription ID
+            const subscriptionId = $('#mfx-subscription-select').val();
+            
+            if (!subscriptionId) {
+                alert('Please select a subscription.');
+                return;
+            }
+            
             // Update total one more time to ensure accuracy
             updateTotal();
             
@@ -286,12 +294,13 @@
             const originalText = $button.text();
             $button.text('Processing...').prop('disabled', true);
             
-            // Make AJAX call to process the selected variations
+            // Make AJAX call to update the subscription with selected variations
             $.ajax({
                 url: mfx_renewal_form_ajax.ajax_url,
                 type: 'POST',
                 data: {
-                    action: 'process_selected_variations',
+                    action: 'update_subscription_with_variations',
+                    subscription_id: subscriptionId,
                     variations: selectedVariations,
                     nonce: mfx_renewal_form_ajax.nonce
                 },
@@ -305,8 +314,10 @@
                             console.log('Some variations could not be added:', response.data.errors);
                         }
                         
-                        // Redirect to cart
-                        window.location.href = response.data.redirect_url;
+                        // Redirect to membership page
+                        if (response.data.redirect) {
+                            window.location.href = response.data.redirect;
+                        }
                     } else {
                         // Show error message
                         alert(response.data.message);
@@ -314,7 +325,7 @@
                     }
                 },
                 error: function() {
-                    alert('An error occurred. Please try again.');
+                    alert('Error updating subscription. Please try again.');
                     $button.text(originalText).prop('disabled', false);
                 }
             });

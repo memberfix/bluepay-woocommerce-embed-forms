@@ -1,19 +1,56 @@
 <?php 
 
 function mfx_process_subscription_update() {
-    check_ajax_referer('subscription_update_nonce', 'nonce');
+    // Check which nonce was used to determine the source
+    $is_renewal_form = false;
+    if (isset($_REQUEST['nonce'])) {
+        $renewal_nonce = wp_verify_nonce($_REQUEST['nonce'], 'mfx_renewal_form_nonce');
+        if ($renewal_nonce) {
+            $is_renewal_form = true;
+            // For renewal form, we don't require a plan
+        } else {
+            // Original subscription update form
+            check_ajax_referer('subscription_update_nonce', 'nonce');
+        }
+    } else {
+        // Original subscription update form
+        check_ajax_referer('subscription_update_nonce', 'nonce');
+    }
     
+    // Get parameters from either subscription update or renewal form
     $subscription_id = isset($_POST['subscription_id']) ? intval($_POST['subscription_id']) : 0;
-    $selected_variations = isset($_POST['selected_variations']) ? $_POST['selected_variations'] : array();
+    
+    // Handle variations from either source
+    $selected_variations = array();
+    if (isset($_POST['selected_variations'])) {
+        $selected_variations = $_POST['selected_variations'];
+    } elseif (isset($_POST['variations'])) {
+        $selected_variations = $_POST['variations'];
+    }
+    
     $selected_plan = isset($_POST['selected_plan']) ? sanitize_text_field($_POST['selected_plan']) : '';
     
-    if (!$subscription_id || empty($selected_variations)) {
-        error_log('Invalid subscription data - ID: ' . $subscription_id);
-        wp_send_json_error(array(
-            'message' => 'Invalid membership data',
-            'code' => 'invalid_data'
-        ));
-        return;
+    // Different validation based on source
+    if ($is_renewal_form) {
+        // For renewal form, we only need subscription_id and variations
+        if (!$subscription_id || empty($selected_variations)) {
+            error_log('Invalid renewal form data - ID: ' . $subscription_id);
+            wp_send_json_error(array(
+                'message' => 'Please select a subscription and at least one product',
+                'code' => 'invalid_data'
+            ));
+            return;
+        }
+    } else {
+        // Original validation for subscription update form
+        if (!$subscription_id || empty($selected_variations)) {
+            error_log('Invalid subscription data - ID: ' . $subscription_id);
+            wp_send_json_error(array(
+                'message' => 'Invalid membership data',
+                'code' => 'invalid_data'
+            ));
+            return;
+        }
     }
 
     $subscription = wcs_get_subscription($subscription_id);
@@ -113,13 +150,37 @@ function mfx_process_subscription_update() {
         }
     }
 
+    // If this is from the renewal form, we need to be more flexible about team data
     if (empty($team_data)) {
-        error_log('No team data found in subscription items or parent order');
-        wp_send_json_error(array(
-            'message' => 'No team data found in subscription items or parent order',
-            'code' => 'no_team_data'
-        ));
-        return;
+        if ($is_renewal_form) {
+            // For renewal form, create default team data if none exists
+            $current_user_id = get_current_user_id();
+            $team_name = mfx_get_team_name_by_user_id($current_user_id);
+            
+            if (!empty($team_name)) {
+                $team_data = array(
+                    'team_id' => $current_user_id, // Use user ID as fallback
+                    'team_name' => $team_name
+                );
+                error_log("Using fallback team data for renewal form - Team Name: $team_name");
+            } else {
+                // Last resort - use user display name
+                $current_user = wp_get_current_user();
+                $team_data = array(
+                    'team_id' => $current_user_id,
+                    'team_name' => $current_user->display_name
+                );
+                error_log("Using user display name as team name: {$current_user->display_name}");
+            }
+        } else {
+            // Original behavior for subscription update form
+            error_log('No team data found in subscription items or parent order');
+            wp_send_json_error(array(
+                'message' => 'No team data found in subscription items or parent order',
+                'code' => 'no_team_data'
+            ));
+            return;
+        }
     }
     
     // Update subscription items
@@ -144,11 +205,21 @@ function mfx_process_subscription_update() {
         $redirect_url = wc_get_account_endpoint_url('mfx-membership');
         error_log('Redirect URL for membership update: ' . $redirect_url);
         
-        wp_send_json_success(array(
-            'message' => 'Membership updated successfully',
-            'subscription_id' => $subscription_id,
-            'redirect' => $redirect_url
-        ));
+        // Different response based on source
+        if ($is_renewal_form) {
+            wp_send_json_success(array(
+                'message' => 'Subscription updated successfully',
+                'subscription_id' => $subscription_id,
+                'redirect' => $redirect_url
+            ));
+        } else {
+            // Original response for subscription update form
+            wp_send_json_success(array(
+                'message' => 'Membership updated successfully',
+                'subscription_id' => $subscription_id,
+                'redirect' => $redirect_url
+            ));
+        }
         
     } catch (Exception $e) {
         error_log('Failed to update subscription: ' . $e->getMessage());

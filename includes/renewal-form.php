@@ -9,6 +9,7 @@ add_action('wp_enqueue_scripts', 'mfx_renewal_form_scripts');
 add_action('wp_ajax_get_subscription_filters', 'get_subscription_filters_ajax');
 add_action('wp_ajax_get_matching_variations', 'get_matching_variations_ajax');
 add_action('wp_ajax_process_selected_variations', 'process_selected_variations_ajax');
+add_action('wp_ajax_update_subscription_with_variations', 'update_subscription_with_variations_ajax');
 
 /**
  * Enqueue necessary scripts for the renewal form
@@ -352,7 +353,7 @@ function get_matching_product_variations($group, $filters) {
                         'name' => $variation->get_name(),
                         'price' => $variation->get_price(),
                         // 'price' => wc_price($variation->get_price()),
-                        // 'price_raw' => $variation->get_price(),
+                        'price_raw' => $variation->get_price(),
                         'attributes' => $variation->get_attributes(),
                         'add_to_cart_url' => $variation->add_to_cart_url(),
                         'type' => 'Type A'
@@ -418,7 +419,7 @@ function get_matching_product_variations($group, $filters) {
                         'name' => $variation->get_name(),
                         'price' => $variation->get_price(),
                         // 'price' => wc_price($variation->get_price()),
-                        // 'price_raw' => $variation->get_price(),
+                        'price_raw' => $variation->get_price(),
                         'attributes' => $variation->get_attributes(),
                         'add_to_cart_url' => $variation->add_to_cart_url(),
                         'type' => 'Type B'
@@ -473,7 +474,7 @@ function get_matching_product_variations($group, $filters) {
                         'name' => $variation->get_name(),
                         'price' => $variation->get_price(),
                         // 'price' => wc_price($variation->get_price()),
-                        // 'price_raw' => $variation->get_price(),
+                        'price_raw' => $variation->get_price(),
                         'attributes' => $variation->get_attributes(),
                         'add_to_cart_url' => $variation->add_to_cart_url(),
                         'type' => 'Type C'
@@ -528,7 +529,7 @@ function get_matching_product_variations($group, $filters) {
                         'name' => $variation->get_name(),
                         'price' => $variation->get_price(),
                         // 'price' => wc_price($variation->get_price()),
-                        // 'price_raw' => $variation->get_price(),
+                        'price_raw' => $variation->get_price(),
                         'attributes' => $variation->get_attributes(),
                         'add_to_cart_url' => $variation->add_to_cart_url(),
                         'type' => 'Type D'
@@ -625,4 +626,36 @@ function process_selected_variations_ajax() {
             'errors' => $errors
         ));
     }
+}
+
+/**
+ * AJAX handler for updating a subscription with selected variations
+ */
+function update_subscription_with_variations_ajax() {
+    // Check nonce for security
+    check_ajax_referer('mfx_renewal_form_nonce', 'nonce');
+    
+    // Get selected subscription and variations
+    $subscription_id = isset($_POST['subscription_id']) ? intval($_POST['subscription_id']) : 0;
+    $variations = isset($_POST['variations']) ? $_POST['variations'] : array();
+    
+    if (empty($subscription_id) || empty($variations)) {
+        wp_send_json_error(array('message' => 'No subscription or variations selected.'));
+        return;
+    }
+    
+    // Sanitize variation IDs
+    $variation_ids = array_map('intval', $variations);
+    
+    // Call the subscription update function
+    // This will pass the request to the subscription-update.php handler
+    $_POST['variations'] = $variation_ids;
+    
+    // Include the subscription update file if not already included
+    if (!function_exists('mfx_process_subscription_update')) {
+        require_once plugin_dir_path(__FILE__) . 'subscription-update.php';
+    }
+    
+    // Call the function directly
+    mfx_process_subscription_update();
 }

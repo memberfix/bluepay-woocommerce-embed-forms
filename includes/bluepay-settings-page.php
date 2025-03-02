@@ -85,7 +85,7 @@ function bluepay_sanitize_renewal_settings($input) {
     $sanitized['membership_product_id'] = absint($input['membership_product_id']);
     $sanitized['premium_service_product_id'] = absint($input['premium_service_product_id']);
     $sanitized['local_chapter_product_id'] = absint($input['local_chapter_product_id']);
-    $sanitized['revenue_source_product_id'] = absint($input['revenue_source_product_id']);
+    $sanitized['revenue_source_product_id'] = absint($input['revenue_source_product_id']);////need to remove this
     $sanitized['supplier_product_id'] = absint($input['supplier_product_id']);
     
     // Sanitize description
