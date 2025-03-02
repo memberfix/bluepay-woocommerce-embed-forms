@@ -161,12 +161,13 @@
             // Add heading
             $matchingProducts.append('<h4>Matching Products (' + variations.length + ')</h4>');
             
-            // Create product grid
-            const $productGrid = $('<div class="product-grid"></div>');
+            // Create form for selected variations
+            const $form = $('<form id="selected-variations-form"></form>');
+            const $productList = $('<ul class="product-list"></ul>');
             
-            // Add each variation to the grid
+            // Add each variation to the list
             $.each(variations, function(index, variation) {
-                const $product = $('<div class="product-item"></div>');
+                const $product = $('<li class="product-item"></li>');
                 
                 // Format price
                 const price = parseFloat(variation.price);
@@ -175,11 +176,15 @@
                     currency: 'USD'
                 });
                 
-                // Build product HTML
-                $product.append('<div class="product-type">' + variation.type + '</div>');
-                $product.append('<h5>' + variation.parent_name + '</h5>');
-                $product.append('<p class="variation-name">' + variation.name + '</p>');
-                $product.append('<p class="price">' + formattedPrice + '</p>');
+                // Add checkbox
+                const $checkbox = $('<input type="checkbox" name="selected_variations[]" value="' + variation.variation_id + '" id="variation-' + variation.variation_id + '" class="variation-checkbox" data-price="' + variation.price_raw + '">');
+                const $label = $('<label for="variation-' + variation.variation_id + '" class="variation-label"></label>');
+                
+                // Build product HTML inside the label
+                $label.append('<div class="product-type">' + variation.type + '</div>');
+                $label.append('<h5>' + variation.parent_name + '</h5>');
+                $label.append('<p class="variation-name">' + variation.name + '</p>');
+                $label.append('<p class="price">' + formattedPrice + '</p>');
                 
                 // Add attributes if available
                 if (variation.attributes && Object.keys(variation.attributes).length > 0) {
@@ -189,18 +194,130 @@
                         $attributes.append('<li><strong>' + key.replace('pa_', '').replace('-', ' ') + ':</strong> ' + value + '</li>');
                     });
                     
-                    $product.append($attributes);
+                    $label.append($attributes);
                 }
                 
-                // Add add-to-cart button
-                const $addToCartBtn = $('<a href="' + variation.add_to_cart_url + '" class="add-to-cart-btn">Add to Cart</a>');
-                $product.append($addToCartBtn);
+                // Append checkbox and label to product item
+                $product.append($checkbox);
+                $product.append($label);
                 
-                // Add the product to the grid
-                $productGrid.append($product);
+                // Add to list
+                $productList.append($product);
             });
             
-            $matchingProducts.append($productGrid);
+            // Add the list to the form
+            $form.append($productList);
+            
+            // Add total section
+            const $totalSection = $('<div class="total-section">' +
+                '<div class="total-label">Total: <span class="total-amount">$0.00</span></div>' +
+                '<div class="total-items">0 items selected</div>' +
+            '</div>');
+            $form.append($totalSection);
+            
+            // Add submit button
+            const $submitButton = $('<button type="button" id="process-selected-variations" class="button">Process Selected Items</button>');
+            $form.append($submitButton);
+            
+            // Add the form to the matching products section
+            $matchingProducts.append($form);
+            
+            // Add event listener for checkboxes to update total
+            $form.on('change', '.variation-checkbox', function() {
+                updateTotal();
+            });
+            
+            // Add event listener for the submit button
+            $submitButton.on('click', function() {
+                processSelectedVariations();
+            });
+        }
+        
+        /**
+         * Update the total price and count of selected items
+         */
+        function updateTotal() {
+            let totalPrice = 0;
+            let itemCount = 0;
+            
+            // Get all checked checkboxes
+            $('.variation-checkbox:checked').each(function() {
+                itemCount++;
+                
+                // Get price from data attribute
+                const price = parseFloat($(this).data('price'));
+                if (!isNaN(price)) {
+                    totalPrice += price;
+                }
+            });
+            
+            // Format the total price
+            const formattedTotal = totalPrice.toLocaleString('en-US', {
+                style: 'currency',
+                currency: 'USD'
+            });
+            
+            // Update the total section
+            $('.total-amount').text(formattedTotal);
+            $('.total-items').text(itemCount + ' item' + (itemCount !== 1 ? 's' : '') + ' selected');
+        }
+        
+        /**
+         * Process selected variations
+         */
+        function processSelectedVariations() {
+            const selectedVariations = [];
+            
+            // Get all checked checkboxes
+            $('.variation-checkbox:checked').each(function() {
+                selectedVariations.push($(this).val());
+            });
+            
+            if (selectedVariations.length === 0) {
+                alert('Please select at least one product variation.');
+                return;
+            }
+            
+            // Update total one more time to ensure accuracy
+            updateTotal();
+            
+            // Show loading state
+            const $button = $('#process-selected-variations');
+            const originalText = $button.text();
+            $button.text('Processing...').prop('disabled', true);
+            
+            // Make AJAX call to process the selected variations
+            $.ajax({
+                url: mfx_renewal_form_ajax.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'process_selected_variations',
+                    variations: selectedVariations,
+                    nonce: mfx_renewal_form_ajax.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Show success message
+                        alert(response.data.message);
+                        
+                        // If there are errors for some variations, show them
+                        if (response.data.errors && response.data.errors.length > 0) {
+                            console.log('Some variations could not be added:', response.data.errors);
+                        }
+                        
+                        // Redirect to cart
+                        window.location.href = response.data.redirect_url;
+                    } else {
+                        // Show error message
+                        alert(response.data.message);
+                        $button.text(originalText).prop('disabled', false);
+                    }
+                },
+                error: function() {
+                    alert('An error occurred. Please try again.');
+                    $button.text(originalText).prop('disabled', false);
+                }
+            });
         }
     });
     

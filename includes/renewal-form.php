@@ -8,6 +8,7 @@ add_shortcode('mfx_renewal_form', 'render_renewal_form');
 add_action('wp_enqueue_scripts', 'mfx_renewal_form_scripts');
 add_action('wp_ajax_get_subscription_filters', 'get_subscription_filters_ajax');
 add_action('wp_ajax_get_matching_variations', 'get_matching_variations_ajax');
+add_action('wp_ajax_process_selected_variations', 'process_selected_variations_ajax');
 
 /**
  * Enqueue necessary scripts for the renewal form
@@ -350,6 +351,8 @@ function get_matching_product_variations($group, $filters) {
                         'parent_name' => $parent_name,
                         'name' => $variation->get_name(),
                         'price' => $variation->get_price(),
+                        // 'price' => wc_price($variation->get_price()),
+                        // 'price_raw' => $variation->get_price(),
                         'attributes' => $variation->get_attributes(),
                         'add_to_cart_url' => $variation->add_to_cart_url(),
                         'type' => 'Type A'
@@ -414,6 +417,8 @@ function get_matching_product_variations($group, $filters) {
                         'parent_name' => $parent_name,
                         'name' => $variation->get_name(),
                         'price' => $variation->get_price(),
+                        // 'price' => wc_price($variation->get_price()),
+                        // 'price_raw' => $variation->get_price(),
                         'attributes' => $variation->get_attributes(),
                         'add_to_cart_url' => $variation->add_to_cart_url(),
                         'type' => 'Type B'
@@ -467,6 +472,8 @@ function get_matching_product_variations($group, $filters) {
                         'parent_name' => $parent_name,
                         'name' => $variation->get_name(),
                         'price' => $variation->get_price(),
+                        // 'price' => wc_price($variation->get_price()),
+                        // 'price_raw' => $variation->get_price(),
                         'attributes' => $variation->get_attributes(),
                         'add_to_cart_url' => $variation->add_to_cart_url(),
                         'type' => 'Type C'
@@ -520,6 +527,8 @@ function get_matching_product_variations($group, $filters) {
                         'parent_name' => $parent_name,
                         'name' => $variation->get_name(),
                         'price' => $variation->get_price(),
+                        // 'price' => wc_price($variation->get_price()),
+                        // 'price_raw' => $variation->get_price(),
                         'attributes' => $variation->get_attributes(),
                         'add_to_cart_url' => $variation->add_to_cart_url(),
                         'type' => 'Type D'
@@ -560,4 +569,60 @@ function get_matching_variations_ajax() {
     wp_send_json_success(array(
         'variations' => $variations
     ));
+}
+
+/**
+ * AJAX handler for processing selected variations
+ */
+function process_selected_variations_ajax() {
+    // Check nonce for security
+    check_ajax_referer('mfx_renewal_form_nonce', 'nonce');
+    
+    // Get selected variations
+    $variations = isset($_POST['variations']) ? $_POST['variations'] : array();
+    
+    if (empty($variations)) {
+        wp_send_json_error(array('message' => 'No variations selected.'));
+        return;
+    }
+    
+    // Sanitize variation IDs
+    $variation_ids = array_map('intval', $variations);
+    
+    // Add each variation to cart
+    $added_to_cart = array();
+    $errors = array();
+    
+    foreach ($variation_ids as $variation_id) {
+        $variation = wc_get_product($variation_id);
+        
+        if (!$variation || !$variation->is_purchasable()) {
+            $errors[] = sprintf('Variation #%d is not available for purchase.', $variation_id);
+            continue;
+        }
+        
+        // Add to cart
+        $added = WC()->cart->add_to_cart($variation->get_parent_id(), 1, $variation_id);
+        
+        if ($added) {
+            $added_to_cart[] = $variation_id;
+        } else {
+            $errors[] = sprintf('Could not add variation #%d to cart.', $variation_id);
+        }
+    }
+    
+    // Send response
+    if (!empty($added_to_cart)) {
+        wp_send_json_success(array(
+            'message' => sprintf('%d product(s) added to cart.', count($added_to_cart)),
+            'added_to_cart' => $added_to_cart,
+            'errors' => $errors,
+            'redirect_url' => wc_get_cart_url()
+        ));
+    } else {
+        wp_send_json_error(array(
+            'message' => 'Could not add products to cart.',
+            'errors' => $errors
+        ));
+    }
 }
