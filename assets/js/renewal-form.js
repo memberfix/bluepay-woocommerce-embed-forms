@@ -180,6 +180,13 @@
                 
                 // Add checkbox
                 const $checkbox = $('<input type="checkbox" name="selected_variations[]" value="' + variation.variation_id + '" id="variation-' + variation.variation_id + '" class="variation-checkbox" data-price="' + variation.price_raw + '">');
+                
+                // Check if this is a Type A product and auto-check it with reduced opacity
+                if (variation.type === 'Type A' || (variation.attribute_classes && variation.attribute_classes.includes('attr-type-a'))) {
+                    $checkbox.prop('checked', true);
+                    $checkbox.addClass('auto-checked');
+                }
+                
                 const $label = $('<label for="variation-' + variation.variation_id + '" class="variation-label"></label>');
                 
                 // Build product HTML inside the label
@@ -235,6 +242,9 @@
             $submitButton.on('click', function() {
                 processSelectedVariations();
             });
+            
+            // Update total to include auto-checked items
+            updateTotal();
         }
         
         /**

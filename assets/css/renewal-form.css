@@ -196,9 +196,10 @@
     display: none;
 }
 
-
-
-
+/* Style for auto-checked checkboxes (Type A products) */
+.auto-checked {
+    opacity: 0.3;
+}
 
 .add-to-cart-btn, #process-selected-variations {
     display: inline-block;
