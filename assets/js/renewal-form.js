@@ -8,7 +8,7 @@
         // Store selected filter values
         let selectedFilters = {};
         
-        // Handle subscription selection
+        // Handle membership selection
         $('#mfx-subscription-select').on('change', function() {
             const subscriptionId = $(this).val();
             
@@ -17,14 +17,14 @@
             
             if (subscriptionId) {
                 // Show the filters section and loading message
-                $('#subscription-filters').show();
+                $('#membership-filters').show();
                 $('.filter-loading').show();
                 $('.filter-container').hide().empty();
                 
                 // Reset selected filters
                 selectedFilters = {};
                 
-                // Make AJAX call to get filters for this subscription
+                // Make AJAX call to get filters for this membership
                 $.ajax({
                     url: mfx_renewal_form_ajax.ajax_url,
                     type: 'POST',
@@ -50,8 +50,8 @@
                     }
                 });
             } else {
-                // Hide filters if no subscription is selected
-                $('#subscription-filters').hide();
+                // Hide filters if no membership is selected
+                $('#membership-filters').hide();
                 $('.filter-container').empty();
             }
         });
@@ -344,6 +344,14 @@
                 }
             });
         }
+        
+        // Trigger change event after a slight delay to ensure everything is loaded
+        setTimeout(function() {
+            const $select = $('#mfx-subscription-select');
+            if ($select.val()) {
+                $select.trigger('change');
+            }
+        }, 300);
     });
     
 })(jQuery);

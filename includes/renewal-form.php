@@ -59,21 +59,34 @@ function render_renewal_form() {
     ?>
     <div class="mfx-renewal-form">
         <div class="subscription-selector">
-            <label for="mfx-subscription-select">Select a subscription:</label>
+            <label for="mfx-subscription-select">Select membership:</label>
             <select id="mfx-subscription-select" name="subscription_id">
-                <option value="">Select a subscription</option>
-                <?php foreach ($subscriptions as $subscription) : ?>
-                    <option value="<?php echo esc_attr($subscription->get_id()); ?>">
+                <?php 
+                $first = true;
+                foreach ($subscriptions as $subscription) : 
+                ?>
+                    <option value="<?php echo esc_attr($subscription->get_id()); ?>" <?php echo $first ? 'selected' : ''; ?>>
                         <?php echo esc_html($subscription->get_id()); ?>
                     </option>
-                <?php endforeach; ?>
+                <?php 
+                $first = false;
+                endforeach; 
+                ?>
             </select>
         </div>
         
-        <div id="selected_subscription_id" style="display:none;"></div>
+        <?php
+        // Get the ID of the first subscription for default selection
+        $first_subscription_id = '';
+        if (!empty($subscriptions)) {
+            $subscription_array = array_values($subscriptions);
+            $first_subscription_id = $subscription_array[0]->get_id();
+        }
+        ?>
+        <div id="selected_subscription_id" style="display:none;"><?php echo esc_html($first_subscription_id); ?></div>
         
         <!-- Filters will be loaded here via AJAX -->
-        <div id="subscription-filters" style="margin-top: 20px; display: none;">
+        <div id="membership-filters" style="margin-top: 20px; display: none;">
             <div class="filter-loading">Loading filters...</div>
             <div class="filter-container"></div>
         </div>
