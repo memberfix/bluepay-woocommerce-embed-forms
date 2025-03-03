@@ -167,7 +167,9 @@
             
             // Add each variation to the list
             $.each(variations, function(index, variation) {
-                const $product = $('<li class="product-item"></li>');
+                // Create product item with attribute classes
+                const attributeClasses = variation.attribute_classes ? variation.attribute_classes.join(' ') : '';
+                const $product = $('<li class="product-item ' + attributeClasses + '"></li>');
                 
                 // Format price
                 const price = parseFloat(variation.price);
@@ -191,7 +193,9 @@
                     const $attributes = $('<ul class="attributes"></ul>');
                     
                     $.each(variation.attributes, function(key, value) {
-                        $attributes.append('<li><strong>' + key.replace('pa_', '').replace('-', ' ') + ':</strong> ' + value + '</li>');
+                        const cleanKey = key.replace('pa_', '').replace('-', ' ');
+                        const attrClass = 'attr-item-' + key.replace('pa_', '') + '-' + value.toLowerCase().replace(/\s+/g, '-');
+                        $attributes.append('<li class="' + attrClass + '"><strong>' + cleanKey + ':</strong> ' + value + '</li>');
                     });
                     
                     $label.append($attributes);

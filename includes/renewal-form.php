@@ -159,6 +159,12 @@ function get_attribute_filter_options($parent_product_id, $attribute_name) {
         WHERE pm.meta_key = %s 
         AND pm.meta_value != ''
         AND p.post_parent = %d
+        AND EXISTS (
+            SELECT 1 FROM {$wpdb->postmeta} pm2
+            WHERE pm2.post_id = p.ID
+            AND pm2.meta_key = 'attribute_renewal'
+            AND pm2.meta_value = 'Yes'
+        )
         ORDER BY pm.meta_value ASC",
         'attribute_' . $attribute_name,
         $parent_product_id
@@ -205,6 +211,12 @@ function get_group_filter_options($group) {
                 WHERE pm2.meta_key = 'attribute_plan'
                 AND pm2.meta_value = pm1.meta_value
                 AND p2.post_parent = %d
+                AND EXISTS (
+                    SELECT 1 FROM {$wpdb->postmeta} pmr2
+                    WHERE pmr2.post_id = p2.ID
+                    AND pmr2.meta_key = 'attribute_renewal'
+                    AND pmr2.meta_value = 'Yes'
+                )
             )
             AND EXISTS (
                 SELECT 1 FROM {$wpdb->postmeta} pm3
@@ -212,6 +224,12 @@ function get_group_filter_options($group) {
                 WHERE pm3.meta_key = 'attribute_plan'
                 AND pm3.meta_value = pm1.meta_value
                 AND p3.post_parent = %d
+                AND EXISTS (
+                    SELECT 1 FROM {$wpdb->postmeta} pmr3
+                    WHERE pmr3.post_id = p3.ID
+                    AND pmr3.meta_key = 'attribute_renewal'
+                    AND pmr3.meta_value = 'Yes'
+                )
             )
             AND EXISTS (
                 SELECT 1 FROM {$wpdb->postmeta} pm4
@@ -219,6 +237,12 @@ function get_group_filter_options($group) {
                 WHERE pm4.meta_key = 'attribute_plan'
                 AND pm4.meta_value = pm1.meta_value
                 AND p4.post_parent = %d
+                AND EXISTS (
+                    SELECT 1 FROM {$wpdb->postmeta} pmr4
+                    WHERE pmr4.post_id = p4.ID
+                    AND pmr4.meta_key = 'attribute_renewal'
+                    AND pmr4.meta_value = 'Yes'
+                )
             )",
             $renewal_settings['membership_product_id'],
             $renewal_settings['premium_service_product_id'],
@@ -346,6 +370,19 @@ function get_matching_product_variations($group, $filters) {
                     $parent_product = wc_get_product($result->post_parent);
                     $parent_name = $parent_product ? $parent_product->get_name() : 'Unknown';
                     
+                    $attributes = $variation->get_attributes();
+                    $attribute_classes = array();
+                    
+                    // Add class for each attribute
+                    foreach ($attributes as $key => $value) {
+                        $clean_key = str_replace('pa_', '', $key);
+                        $clean_value = sanitize_html_class($value);
+                        $attribute_classes[] = "attr-{$clean_key}-{$clean_value}";
+                    }
+                    
+                    // Add class for product type
+                    $attribute_classes[] = "attr-type-a";
+                    
                     $matching_variations[] = array(
                         'variation_id' => $result->ID,
                         'parent_id' => $result->post_parent,
@@ -354,9 +391,11 @@ function get_matching_product_variations($group, $filters) {
                         'price' => $variation->get_price(),
                         // 'price' => wc_price($variation->get_price()),
                         'price_raw' => $variation->get_price(),
-                        'attributes' => $variation->get_attributes(),
+                        'attributes' => $attributes,
+                        'attribute_classes' => $attribute_classes,
                         'add_to_cart_url' => $variation->add_to_cart_url(),
                         'type' => 'Type A'
+                        //'type' => 'Staffing membership'
                     );
                 }
             }
@@ -412,6 +451,19 @@ function get_matching_product_variations($group, $filters) {
                     $parent_product = wc_get_product($result->post_parent);
                     $parent_name = $parent_product ? $parent_product->get_name() : 'Unknown';
                     
+                    $attributes = $variation->get_attributes();
+                    $attribute_classes = array();
+                    
+                    // Add class for each attribute
+                    foreach ($attributes as $key => $value) {
+                        $clean_key = str_replace('pa_', '', $key);
+                        $clean_value = sanitize_html_class($value);
+                        $attribute_classes[] = "attr-{$clean_key}-{$clean_value}";
+                    }
+                    
+                    // Add class for product type
+                    $attribute_classes[] = "attr-type-b";
+                    
                     $matching_variations[] = array(
                         'variation_id' => $result->ID,
                         'parent_id' => $result->post_parent,
@@ -420,9 +472,11 @@ function get_matching_product_variations($group, $filters) {
                         'price' => $variation->get_price(),
                         // 'price' => wc_price($variation->get_price()),
                         'price_raw' => $variation->get_price(),
-                        'attributes' => $variation->get_attributes(),
+                        'attributes' => $attributes,
+                        'attribute_classes' => $attribute_classes,
                         'add_to_cart_url' => $variation->add_to_cart_url(),
                         'type' => 'Type B'
+                        //'type' => 'Premium service'
                     );
                 }
             }
@@ -467,6 +521,19 @@ function get_matching_product_variations($group, $filters) {
                     $parent_product = wc_get_product($result->post_parent);
                     $parent_name = $parent_product ? $parent_product->get_name() : 'Unknown';
                     
+                    $attributes = $variation->get_attributes();
+                    $attribute_classes = array();
+                    
+                    // Add class for each attribute
+                    foreach ($attributes as $key => $value) {
+                        $clean_key = str_replace('pa_', '', $key);
+                        $clean_value = sanitize_html_class($value);
+                        $attribute_classes[] = "attr-{$clean_key}-{$clean_value}";
+                    }
+                    
+                    // Add class for product type
+                    $attribute_classes[] = "attr-type-c";
+                    
                     $matching_variations[] = array(
                         'variation_id' => $result->ID,
                         'parent_id' => $result->post_parent,
@@ -475,9 +542,11 @@ function get_matching_product_variations($group, $filters) {
                         'price' => $variation->get_price(),
                         // 'price' => wc_price($variation->get_price()),
                         'price_raw' => $variation->get_price(),
-                        'attributes' => $variation->get_attributes(),
+                        'attributes' => $attributes,
+                        'attribute_classes' => $attribute_classes,
                         'add_to_cart_url' => $variation->add_to_cart_url(),
                         'type' => 'Type C'
+                        //'type' => 'Local Chapter'
                     );
                 }
             }
@@ -522,6 +591,19 @@ function get_matching_product_variations($group, $filters) {
                     $parent_product = wc_get_product($result->post_parent);
                     $parent_name = $parent_product ? $parent_product->get_name() : 'Unknown';
                     
+                    $attributes = $variation->get_attributes();
+                    $attribute_classes = array();
+                    
+                    // Add class for each attribute
+                    foreach ($attributes as $key => $value) {
+                        $clean_key = str_replace('pa_', '', $key);
+                        $clean_value = sanitize_html_class($value);
+                        $attribute_classes[] = "attr-{$clean_key}-{$clean_value}";
+                    }
+                    
+                    // Add class for product type
+                    $attribute_classes[] = "attr-type-d";
+                    
                     $matching_variations[] = array(
                         'variation_id' => $result->ID,
                         'parent_id' => $result->post_parent,
@@ -530,7 +612,8 @@ function get_matching_product_variations($group, $filters) {
                         'price' => $variation->get_price(),
                         // 'price' => wc_price($variation->get_price()),
                         'price_raw' => $variation->get_price(),
-                        'attributes' => $variation->get_attributes(),
+                        'attributes' => $attributes,
+                        'attribute_classes' => $attribute_classes,
                         'add_to_cart_url' => $variation->add_to_cart_url(),
                         'type' => 'Type D'
                     );
