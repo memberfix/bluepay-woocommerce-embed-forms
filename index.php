@@ -3,7 +3,7 @@
  * Plugin Name: BluePay Woocommerce Embed Forms
  * Plugin URI: https://memberfix.rocks
  * Description: Embed forms. Changing order status. Renewal form.
- * Version: 1.0.6.9
+ * Version: 1.0.7.0
  * Requires at least: 6.0
  * Requires PHP: 7.0
  * Author: Denys Melnychuk
@@ -27,7 +27,7 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/bluepay-response-result.php
 require_once plugin_dir_path( __FILE__ ) . 'includes/order-confirmation-page.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/bluepay-payment-link-shortcode.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/get_guest_invoice_button.php';
-require_once plugin_dir_path( __FILE__ ) . 'includes/product-filter-shortcode.php';
+//require_once plugin_dir_path( __FILE__ ) . 'includes/product-filter-shortcode.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/myaccount-wc-tab.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/bluepay-order-update.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/renewal-form.php';
