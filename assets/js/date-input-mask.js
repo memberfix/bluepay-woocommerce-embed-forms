@@ -48,15 +48,16 @@ document.addEventListener('DOMContentLoaded', function() {
     form.addEventListener('submit', function(e) {
         const isUS = countryInput.value === 'United States';
         
-        // Clear the value of the hidden input
+        // Update field properties right before submission
+        updateStateFields(countryInput.value);
+        
+        // Validate the visible field
         if (isUS) {
-            stateTextInput.value = '';
             if (!stateSelectInput.value) {
                 e.preventDefault();
                 alert('Please select a state');
             }
         } else {
-            stateSelectInput.value = '';
             if (!stateTextInput.value.trim()) {
                 e.preventDefault();
                 alert('Please enter your region/state');
@@ -69,9 +70,21 @@ document.addEventListener('DOMContentLoaded', function() {
         stateSelectInput.style.display = isUS ? 'block' : 'none';
         stateTextInput.style.display = isUS ? 'none' : 'block';
         
-        // Update required attributes
-        stateSelectInput.required = isUS;
-        stateTextInput.required = !isUS;
+        // Update required attributes and disable the hidden field
+        if (isUS) {
+            stateSelectInput.required = true;
+            stateSelectInput.name = 'STATE';
+            stateTextInput.required = false;
+            stateTextInput.name = 'STATE_UNUSED'; // Rename to avoid duplicate names
+            stateTextInput.disabled = true; // Disable so it's not included in form submission
+        } else {
+            stateTextInput.required = true;
+            stateTextInput.name = 'STATE';
+            stateTextInput.disabled = false;
+            stateSelectInput.required = false;
+            stateSelectInput.name = 'STATE_UNUSED'; // Rename to avoid duplicate names
+            stateSelectInput.disabled = true; // Disable so it's not included in form submission
+        }
         
         // Clear values when switching
         stateSelectInput.value = isUS ? stateSelectInput.value : '';

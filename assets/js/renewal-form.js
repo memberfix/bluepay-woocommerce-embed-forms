@@ -227,7 +227,7 @@
             $form.append($totalSection);
             
             // Add submit button
-            const $submitButton = $('<button type="button" id="process-selected-variations" class="button">Update Subscription</button>');
+            const $submitButton = $('<button type="button" id="process-selected-variations" class="button">Update Membership</button>');
             $form.append($submitButton);
             
             // Add the form to the matching products section
