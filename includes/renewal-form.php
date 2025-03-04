@@ -193,8 +193,7 @@ function get_attribute_filter_options($parent_product_id, $attribute_name) {
     global $wpdb;
     
     // Get attribute values for the specified parent product
-    $attribute_values = $wpdb->get_col($wpdb->prepare(
-        "SELECT DISTINCT pm.meta_value 
+    $query = "SELECT DISTINCT pm.meta_value 
         FROM {$wpdb->postmeta} pm
         JOIN {$wpdb->posts} p ON p.ID = pm.post_id
         WHERE pm.meta_key = %s 
@@ -205,8 +204,17 @@ function get_attribute_filter_options($parent_product_id, $attribute_name) {
             WHERE pm2.post_id = p.ID
             AND pm2.meta_key = 'attribute_renewal'
             AND pm2.meta_value = 'Yes'
-        )
-        ORDER BY pm.meta_value ASC",
+        )";
+    
+    // Only sort annual-revenue by menu_order
+    if ($attribute_name === 'annual-revenue') {
+        $query .= " ORDER BY p.menu_order ASC, pm.meta_value ASC";
+    } else {
+        $query .= " ORDER BY pm.meta_value ASC";
+    }
+    
+    $attribute_values = $wpdb->get_col($wpdb->prepare(
+        $query,
         'attribute_' . $attribute_name,
         $parent_product_id
     ));
