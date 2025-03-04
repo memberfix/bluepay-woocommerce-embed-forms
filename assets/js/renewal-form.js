@@ -319,17 +319,18 @@
                 },
                 success: function(response) {
                     if (response.success) {
-                        // Show success message
-                        alert(response.data.message);
-                        
-                        // If there are errors for some variations, show them
+                        // If there are errors for some variations, log them to console
                         if (response.data.errors && response.data.errors.length > 0) {
                             console.log('Some variations could not be added:', response.data.errors);
                         }
                         
-                        // Redirect to membership page
+                        // Redirect to subscription view page
                         if (response.data.redirect) {
                             window.location.href = response.data.redirect;
+                        } else {
+                            // Fallback if no redirect URL is provided
+                            alert(response.data.message || 'Membership updated successfully');
+                            $button.text(originalText).prop('disabled', false);
                         }
                     } else {
                         // Show error message

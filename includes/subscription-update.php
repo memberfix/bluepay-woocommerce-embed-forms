@@ -201,8 +201,8 @@ function mfx_process_subscription_update() {
         // Save all changes
         $subscription->save();
         
-        // Get the redirect URL
-        $redirect_url = wc_get_account_endpoint_url('mfx-membership');
+        // Get the redirect URL - now redirecting to view-subscription page with success parameter
+        $redirect_url = wc_get_endpoint_url('view-subscription', $subscription_id, wc_get_page_permalink('myaccount')) . '?status_update=success';
         error_log('Redirect URL for membership update: ' . $redirect_url);
         
         // Different response based on source
