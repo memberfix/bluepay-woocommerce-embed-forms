@@ -11,6 +11,21 @@ add_action('wp_ajax_get_matching_variations', 'get_matching_variations_ajax');
 add_action('wp_ajax_process_selected_variations', 'process_selected_variations_ajax');
 add_action('wp_ajax_update_subscription_with_variations', 'update_subscription_with_variations_ajax');
 
+
+// Filter to add a "Change My Membership" action to default WooCommerce subscription actions
+add_filter('wcs_view_subscription_actions', function ($actions, $subscription) {
+    $subscription_id = $subscription->get_id(); // Get subscription ID
+
+    $actions['change_membership'] = array(
+        'url'  => site_url("/change-my-membership?id={$subscription_id}"), // Dynamic URL
+        'name' => 'Change My Membership',
+    );
+
+    return $actions;
+}, 10, 2);
+
+
+
 /**
  * Enqueue necessary scripts for the renewal form
  */
@@ -47,46 +62,55 @@ function render_renewal_form() {
         return '<p>WooCommerce Subscriptions is required for this feature.</p>';
     }
     
+    // Get subscription ID from URL parameter
+    $subscription_id = isset($_GET['id']) ? absint($_GET['id']) : 0;
+    
+    // If no subscription ID provided, show error message
+    if (!$subscription_id) {
+        return '<p>No subscription ID provided. Please use the "Change My Membership" button from your account.</p>';
+    }
+    
     // Get user's subscriptions
-    $subscriptions = wcs_get_users_subscriptions(get_current_user_id());
+    $user_subscriptions = wcs_get_users_subscriptions(get_current_user_id());
     
     // Check if user has any subscriptions
-    if (empty($subscriptions)) {
+    if (empty($user_subscriptions)) {
         return '<p>You do not have any active subscriptions.</p>';
+    }
+    
+    // Verify that the subscription belongs to the current user
+    $subscription_exists = false;
+    foreach ($user_subscriptions as $user_subscription) {
+        if ($user_subscription->get_id() == $subscription_id) {
+            $subscription_exists = true;
+            break;
+        }
+    }
+    
+    if (!$subscription_exists) {
+        return '<p>You do not have permission to access this subscription.</p>';
+    }
+    
+    // Get the subscription object
+    $subscription = wcs_get_subscription($subscription_id);
+    if (!$subscription) {
+        return '<p>Subscription not found.</p>';
     }
     
     ob_start();
     ?>
     <div class="mfx-renewal-form">
-        <div class="subscription-selector">
-            <label for="mfx-subscription-select">Select membership:</label>
-            <select id="mfx-subscription-select" name="subscription_id">
-                <?php 
-                $first = true;
-                foreach ($subscriptions as $subscription) : 
-                ?>
-                    <option value="<?php echo esc_attr($subscription->get_id()); ?>" <?php echo $first ? 'selected' : ''; ?>>
-                        <?php echo esc_html($subscription->get_id()); ?>
-                    </option>
-                <?php 
-                $first = false;
-                endforeach; 
-                ?>
-            </select>
+        <div class="subscription-info">
+            <h3>Membership Information</h3>
+            <p>Subscription #<?php echo esc_html($subscription_id); ?></p>
+            <p>Status: <?php echo esc_html(wcs_get_subscription_status_name($subscription->get_status())); ?></p>
         </div>
         
-        <?php
-        // Get the ID of the first subscription for default selection
-        $first_subscription_id = '';
-        if (!empty($subscriptions)) {
-            $subscription_array = array_values($subscriptions);
-            $first_subscription_id = $subscription_array[0]->get_id();
-        }
-        ?>
-        <div id="selected_subscription_id" style="display:none;"><?php echo esc_html($first_subscription_id); ?></div>
+        <!-- Store subscription ID in hidden div for JavaScript to use -->
+        <div id="selected_subscription_id"><?php echo esc_html($subscription_id); ?></div>
         
         <!-- Filters will be loaded here via AJAX -->
-        <div id="membership-filters" style="margin-top: 20px; display: none;">
+        <div id="membership-filters" style="margin-top: 20px;">
             <div class="filter-loading">Loading filters...</div>
             <div class="filter-container"></div>
         </div>

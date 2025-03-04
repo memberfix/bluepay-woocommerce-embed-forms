@@ -8,12 +8,11 @@
         // Store selected filter values
         let selectedFilters = {};
         
-        // Handle membership selection
-        $('#mfx-subscription-select').on('change', function() {
-            const subscriptionId = $(this).val();
-            
-            // Update the hidden field with the selected subscription ID
-            $('#selected_subscription_id').text(subscriptionId);
+        /**
+         * Load subscription filters based on subscription ID
+         */
+        function loadSubscriptionFilters() {
+            const subscriptionId = $('#selected_subscription_id').text();
             
             if (subscriptionId) {
                 // Show the filters section and loading message
@@ -50,11 +49,11 @@
                     }
                 });
             } else {
-                // Hide filters if no membership is selected
+                // Hide filters if no subscription ID is found
                 $('#membership-filters').hide();
                 $('.filter-container').empty();
             }
-        });
+        }
         
         /**
          * Build the filter UI based on the group and filters
@@ -292,11 +291,11 @@
                 return;
             }
             
-            // Get the subscription ID
-            const subscriptionId = $('#mfx-subscription-select').val();
+            // Get the subscription ID from the hidden div
+            const subscriptionId = $('#selected_subscription_id').text();
             
             if (!subscriptionId) {
-                alert('Please select a subscription.');
+                alert('No subscription ID found. Please try refreshing the page.');
                 return;
             }
             
@@ -345,12 +344,9 @@
             });
         }
         
-        // Trigger change event after a slight delay to ensure everything is loaded
+        // Load subscription filters after a slight delay to ensure everything is loaded
         setTimeout(function() {
-            const $select = $('#mfx-subscription-select');
-            if ($select.val()) {
-                $select.trigger('change');
-            }
+            loadSubscriptionFilters();
         }, 300);
     });
     
