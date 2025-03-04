@@ -192,10 +192,15 @@ function mfx_process_subscription_update() {
 
         // Update subscription plan if specified
         if (!empty($selected_plan)) {
+            error_log("Updating subscription #{$subscription_id} with plan: {$selected_plan}");
             $update_plan_result = mfx_update_subscription_recurring_period($subscription, $selected_plan);
             if (is_wp_error($update_plan_result)) {
+                error_log("Error updating subscription plan: " . $update_plan_result->get_error_message());
                 throw new Exception($update_plan_result->get_error_message());
             }
+            error_log("Successfully updated subscription plan to: {$selected_plan}");
+        } else {
+            error_log("No plan specified for subscription #{$subscription_id}, skipping plan update");
         }
 
         // Save all changes
@@ -338,7 +343,13 @@ function mfx_update_failed_order_items($order, $selected_variations, $team_data)
 
 function mfx_update_subscription_recurring_period($subscription, $selected_plan) {
     try {
-        //error_log("Starting subscription period update with plan: " . print_r($selected_plan, true));
+        $subscription_id = $subscription->get_id();
+        error_log("Starting subscription period update for subscription #{$subscription_id} with plan: {$selected_plan}");
+        
+        // Get current billing interval and period for logging
+        $current_interval = $subscription->get_billing_interval();
+        $current_period = $subscription->get_billing_period();
+        error_log("Current billing settings - Interval: {$current_interval}, Period: {$current_period}");
         
         // Convert plan to lowercase and trim for consistency
         $selected_plan = strtolower(trim($selected_plan));
@@ -358,7 +369,7 @@ function mfx_update_subscription_recurring_period($subscription, $selected_plan)
         $new_interval = $period_mapping[$selected_plan]['interval'];
         $new_period = $period_mapping[$selected_plan]['period'];
         
-        error_log("Setting new interval to: $new_interval and period to: $new_period");
+        error_log("Setting new billing settings - Interval: {$new_interval}, Period: {$new_period}");
         
         try {
             // Get all orders for this subscription

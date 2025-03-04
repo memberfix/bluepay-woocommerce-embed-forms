@@ -6,6 +6,28 @@
     margin-bottom: 30px;
 }
 
+.back-button-container {
+    margin-bottom: 20px;
+}
+
+.back-button {
+    display: inline-block;
+    padding: 8px 15px;
+    background-color: #f0f0f0;
+    color: #333;
+    text-decoration: none;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.back-button:hover {
+    background-color: #e0e0e0;
+    border-color: #ccc;
+    color: #000;
+}
+
 .subscription-info {
     margin-bottom: 20px;
     padding: 15px;

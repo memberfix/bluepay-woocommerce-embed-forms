@@ -24,6 +24,10 @@ get_header();
         <?php echo do_shortcode('[mfx_renewal_form]'); ?>
     </div>
     
+    <div class="note" style="margin-top: 30px; padding: 15px; background: #f5f5f5; border-left: 4px solid #2271b1;">
+        <p><strong>Note:</strong> The form now includes a "Back to Subscription" button at the top that redirects to the subscription view page.</p>
+    </div>
+    
     <div class="debug-info" style="margin-top: 30px; padding: 15px; background: #f5f5f5; border: 1px solid #ddd;">
         <h3>Debug Information</h3>
         <p>This section shows debug information to help with development.</p>

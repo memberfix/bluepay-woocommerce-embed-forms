@@ -100,6 +100,10 @@ function render_renewal_form() {
     ob_start();
     ?>
     <div class="mfx-renewal-form">
+        <div class="back-button-container">
+            <a href="<?php echo esc_url(wc_get_endpoint_url('view-subscription', $subscription_id, wc_get_page_permalink('myaccount'))); ?>" class="button back-button">&larr; Back to Subscription</a>
+        </div>
+        
         <div class="subscription-info">
             <h3>Membership Information</h3>
             <p>Subscription #<?php echo esc_html($subscription_id); ?></p>
@@ -767,9 +771,60 @@ function update_subscription_with_variations_ajax() {
     // Sanitize variation IDs
     $variation_ids = array_map('intval', $variations);
     
+    // Get renewal settings for product IDs
+    $renewal_settings = get_option('mfx_bluepay_renewal_settings', array(
+        'membership_product_id' => 12350,
+        'premium_service_product_id' => 12390,
+        'local_chapter_product_id' => 12428,
+        'supplier_product_id' => 12386
+    ));
+    
+    // Extract plan from selected variations
+    $selected_plan = '';
+    $has_type_d_product = false;
+    
+    foreach ($variation_ids as $variation_id) {
+        $variation = wc_get_product($variation_id);
+        if (!$variation) {
+            continue;
+        }
+        
+        $parent_id = $variation->get_parent_id();
+        
+        // Check if this is Type A (membership) product
+        if ($parent_id == $renewal_settings['membership_product_id']) {
+            // Get the plan attribute
+            $plan = $variation->get_attribute('plan');
+            if (!empty($plan)) {
+                error_log("Found plan attribute in Type A variation #{$variation_id}: {$plan}");
+                $selected_plan = $plan;
+                break; // Use the first plan we find from Type A
+            }
+        }
+        
+        // Check if this is Type D (supplier) product
+        if ($parent_id == $renewal_settings['supplier_product_id']) {
+            $has_type_d_product = true;
+            // Type D doesn't have plan attribute, but we'll note that we found one
+            error_log("Found Type D product variation #{$variation_id}");
+        }
+    }
+    
+    // If no plan was found from Type A but we have Type D products, use 'annual' as default
+    if (empty($selected_plan) && $has_type_d_product) {
+        $selected_plan = 'annual';
+        error_log("Using default 'annual' plan for Type D product");
+    }
+    
     // Call the subscription update function
     // This will pass the request to the subscription-update.php handler
     $_POST['variations'] = $variation_ids;
+    
+    // Add the plan if found
+    if (!empty($selected_plan)) {
+        $_POST['selected_plan'] = $selected_plan;
+        error_log("Setting selected_plan to: {$selected_plan}");
+    }
     
     // Include the subscription update file if not already included
     if (!function_exists('mfx_process_subscription_update')) {
