@@ -1,11 +1,9 @@
-body {
+/* Scope all styles to the bluepay form container to prevent global conflicts */
+.bluepay-form-container {
     font-family: Arial, sans-serif;
-    background-color: #f9f9f9;
-    margin: 0;
-    padding: 20px;
 }
 
-form {
+.bluepay-form-container form {
     background-color: #ffffff;
     padding: 20px;
     border-radius: 8px;
@@ -14,26 +12,26 @@ form {
     margin: 0 auto;
 }
 
-form * {
+.bluepay-form-container form * {
     box-sizing: border-box;
 }
 
-h3 {
+.bluepay-form-container h3 {
     margin-bottom: 20px;
     color: #0056b3;
     font-size: 18px;
 }
 
-label {
+.bluepay-form-container label {
     display: block;
     margin-bottom: 5px;
     font-weight: bold;
     font-size: 14px;
 }
 
-input[type="text"],
-input[type="email"],
-input[type="tel"],
+.bluepay-form-container input[type="text"],
+.bluepay-form-container input[type="email"],
+.bluepay-form-container input[type="tel"],
 
 .product-filter-container {
     display: flex;

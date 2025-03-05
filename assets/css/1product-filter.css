@@ -1,8 +1,8 @@
-.current-subscription-details {
+.product-filter-container .current-subscription-details {
     margin-bottom: 30px;
 }
 
-.subscription-info {
+.product-filter-container .subscription-info {
     background: #fff;
     border: 1px solid #e5e5e5;
     border-radius: 4px;

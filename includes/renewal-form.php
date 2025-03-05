@@ -3,6 +3,7 @@ if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly
 }
 
+require_once plugin_dir_path( __FILE__ ) . 'current-subscription-details.php';
 // Register the shortcode and AJAX actions
 add_shortcode('mfx_renewal_form', 'render_renewal_form');
 add_action('wp_enqueue_scripts', 'mfx_renewal_form_scripts');
@@ -23,6 +24,9 @@ add_filter('wcs_view_subscription_actions', function ($actions, $subscription) {
 
     return $actions;
 }, 10, 2);
+
+
+
 
 
 
@@ -99,10 +103,24 @@ function render_renewal_form() {
     
     ob_start();
     ?>
+
+<div class="product-filter-container">
+        <?php if (function_exists('wcs_get_users_subscriptions')): ?>
+            <!-- Current Subscription Details -->
+            <div class="current-subscription-details">
+                <h3>Current Membership Details</h3>
+                <?php do_action('mfx_display_current_subscription_details'); ?>
+            </div>
+        <?php endif; ?>
+
+
+
     <div class="mfx-renewal-form">
         <div class="back-button-container">
             <a href="<?php echo esc_url(wc_get_endpoint_url('view-subscription', $subscription_id, wc_get_page_permalink('myaccount'))); ?>" class="button back-button">&larr; Back to Subscription</a>
         </div>
+
+
         
         <div class="subscription-info">
             <h3>Membership Information</h3>

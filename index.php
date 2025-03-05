@@ -3,7 +3,7 @@
  * Plugin Name: BluePay Woocommerce Embed Forms
  * Plugin URI: https://memberfix.rocks
  * Description: Embed forms. Changing order status. Renewal form.
- * Version: 1.0.7.0
+ * Version: 1.0.7.3
  * Requires at least: 6.0
  * Requires PHP: 7.0
  * Author: Denys Melnychuk
@@ -28,7 +28,7 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/order-confirmation-page.php
 require_once plugin_dir_path( __FILE__ ) . 'includes/bluepay-payment-link-shortcode.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/get_guest_invoice_button.php';
 //require_once plugin_dir_path( __FILE__ ) . 'includes/product-filter-shortcode.php';
-require_once plugin_dir_path( __FILE__ ) . 'includes/myaccount-wc-tab.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/subscription-update.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/bluepay-order-update.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/renewal-form.php';
 
@@ -78,38 +78,97 @@ function mfx_update_change_membership_page() {
 
 // Plugin activation hook
 function mfx_bluepay_activate() {
-    // Create Change Membership page if it doesn't exist
-    $page = get_page_by_path('change-my-membership');
+    // Create all required pages
+    mfx_create_required_pages();
     
-    if (empty($page)) {
-        $page_data = array(
-            'post_title'    => 'Change My Membership',
-            'post_name'     => 'change-my-membership',
-            'post_content'  => '[product_filter]
+    // Force refresh permalink
+    flush_rewrite_rules();
+}
+
+/**
+ * Create all required pages for the plugin functionality
+ */
+function mfx_create_required_pages() {
+    // Pages to create with their details
+    $pages = array(
+        'change-my-membership' => array(
+            'title' => 'Change My Membership',
+            'content' => '[product_filter]
 
 <h3>Renew Your Subscription</h3>
 [mfx_renewal_form]',
-            'post_status'   => 'publish',
-            'post_type'     => 'page',
-            'post_author'   => 1
-        );
+            'option_name' => 'renewal_form_page_url'
+        ),
+        'payment-form' => array(
+            'title' => 'Payment Form',
+            'content' => '<h2>Complete Your Payment</h2>
+[bluepay_form]',
+            'option_name' => 'bluepay_payment_form_url'
+        ),
+        'form-bluepay' => array(
+            'title' => 'BluePay Payment Form',
+            'content' => '<h2>Complete Your Payment</h2>
+[bluepay_form]',
+            'option_name' => 'bluepay_form_page_url'
+        ),
+        'payment-result' => array(
+            'title' => 'Payment Result',
+            'content' => '<h2>Payment Result</h2>
+[bluepay_response_result]',
+            'option_name' => 'bluepay_approved_url' // Also used for declined and error URLs
+        ),
+        'order-confirmation' => array(
+            'title' => 'Order Confirmation',
+            'content' => '<h2>Order Confirmation</h2>
+[bluepay_gateway_order_confirmation]',
+            'option_name' => 'bluepay_confirmed_order_page_url'
+        )
+    );
+    
+    // Create each page if it doesn't exist
+    foreach ($pages as $slug => $page_data) {
+        $existing_page = get_page_by_path($slug);
         
-        $page_id = wp_insert_post($page_data);
-        
-        if (!is_wp_error($page_id)) {
-            // Force refresh permalink
-            $page_url = get_permalink($page_id);
-            flush_rewrite_rules();
+        if (empty($existing_page)) {
+            // Create the page
+            $new_page_data = array(
+                'post_title'    => $page_data['title'],
+                'post_name'     => $slug,
+                'post_content'  => $page_data['content'],
+                'post_status'   => 'publish',
+                'post_type'     => 'page',
+                'post_author'   => 1
+            );
             
-            // Save the URL in plugin settings
-            update_option('renewal_form_page_url', $page_url);
+            $page_id = wp_insert_post($new_page_data);
+            
+            if (!is_wp_error($page_id)) {
+                // Save the URL in plugin settings
+                $page_url = get_permalink($page_id);
+                update_option($page_data['option_name'], $page_url);
+                
+                // For payment result page, set all result URLs to the same page
+                if ($slug === 'payment-result') {
+                    update_option('bluepay_declined_url', $page_url);
+                    update_option('bluepay_error_url', $page_url);
+                }
+            }
+        } else {
+            // Update existing page URL in settings
+            $page_url = get_permalink($existing_page->ID);
+            update_option($page_data['option_name'], $page_url);
+            
+            // For payment result page, set all result URLs to the same page
+            if ($slug === 'payment-result') {
+                update_option('bluepay_declined_url', $page_url);
+                update_option('bluepay_error_url', $page_url);
+            }
+            
+            // Check if the page content needs to be updated
+            if ($slug === 'change-my-membership') {
+                mfx_update_change_membership_page();
+            }
         }
-    } else {
-        // Update existing page URL in settings
-        update_option('renewal_form_page_url', get_permalink($page->ID));
-        
-        // Update the page content to include the renewal form shortcode
-        mfx_update_change_membership_page();
     }
 }
 
@@ -136,5 +195,45 @@ function mfx_bluepay_run_updates() {
         
         // Update the stored version number
         update_option('mfx_bluepay_version', '1.0.6.8');
+    }
+    
+    // If this is an update to version 1.0.7.0 or newer
+    if (version_compare($current_version, '1.0.7.0', '<')) {
+        // Create all required pages for existing installations
+        mfx_create_required_pages();
+        
+        // Update the stored version number
+        update_option('mfx_bluepay_version', '1.0.7.0');
+    }
+    
+    // If this is an update to version 1.0.7.3 or newer
+    if (version_compare($current_version, '1.0.7.3', '<')) {
+        // Ensure the form-bluepay page exists
+        $form_bluepay_page = get_page_by_path('form-bluepay');
+        
+        if (empty($form_bluepay_page)) {
+            // Create the form-bluepay page
+            $page_data = array(
+                'post_title'    => 'BluePay Payment Form',
+                'post_name'     => 'form-bluepay',
+                'post_content'  => '<h2>Complete Your Payment</h2>\n[bluepay_form]',
+                'post_status'   => 'publish',
+                'post_type'     => 'page',
+                'post_author'   => 1
+            );
+            
+            $page_id = wp_insert_post($page_data);
+            
+            if (!is_wp_error($page_id)) {
+                // Save the URL in plugin settings
+                update_option('bluepay_form_page_url', get_permalink($page_id));
+            }
+        } else {
+            // Update the URL in settings
+            update_option('bluepay_form_page_url', get_permalink($form_bluepay_page->ID));
+        }
+        
+        // Update the stored version number
+        update_option('mfx_bluepay_version', '1.0.7.3');
     }
 }

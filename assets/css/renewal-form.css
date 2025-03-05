@@ -287,3 +287,165 @@
     background-color: #ffeeee;
     border-left: 4px solid #d63638;
 }
+
+
+.current-subscription-details {
+    position: fixed;
+    top: 20%; /* Adjust as needed */
+    right: 5px; /* Adjust as needed */
+    width: 250px; /* Set a width for better layout */
+    margin-bottom: 30px;
+    margin: 0; /* Remove margin since it's now positioned */
+    padding: 5px;
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    font-size: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Optional: Add shadow for better visibility */
+    z-index: 1000; /* Ensure it stays above other elements */
+}
+
+
+.current-subscription-details {
+    margin-bottom: 30px;
+}
+
+.subscription-info {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 4px;
+    padding: 5px;
+    margin-bottom: 5px;
+}
+
+.team-name {
+    font-size: 1.5em;
+    color: #2c3338;
+    margin: 0 0 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.subscription-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.subscription-id {
+    font-size: 1.1em;
+    color: #515151;
+    margin: 0;
+}
+
+.subscription-status {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 0.9em;
+    font-weight: 500;
+    margin: 0;
+}
+
+.subscription-status.active {
+    background: #c6e1c6;
+    color: #5b841b;
+}
+
+.subscription-status.on-hold {
+    background: #f8dda7;
+    color: #94660c;
+}
+
+.subscription-overview {
+    background: #f8f9fa;
+    padding: 5px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.subscription-overview p {
+    display: flex;
+    justify-content: space-between;
+    margin: 8px 0;
+    font-size: 0.95em;
+}
+
+.subscription-overview .label {
+    color: #515151;
+    font-weight: 500;
+}
+
+.subscription-overview .value {
+    color: #2c3338;
+}
+
+.subscription-items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.subscription-items-table th,
+.subscription-items-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.subscription-items-table thead th {
+    background: #f8f9fa;
+    font-weight: 500;
+    color: #515151;
+}
+
+.subscription-items-table .product-name {
+    width: 70%;
+}
+
+.subscription-items-table .product-total {
+    text-align: right;
+}
+
+.subscription-items-table .product-quantity {
+    color: #515151;
+    margin-left: 5px;
+}
+
+.subscription-items-table dl.variation {
+    margin: 5px 0 0;
+    font-size: 0.9em;
+    color: #767676;
+}
+
+.subscription-items-table dl.variation dt,
+.subscription-items-table dl.variation dd {
+    display: inline;
+    margin: 0;
+}
+
+.subscription-items-table dl.variation dt {
+    font-weight: 500;
+    margin-right: 5px;
+}
+
+.subscription-items-table dl.variation dd {
+    margin-right: 15px;
+}
+
+.subscription-items-table tfoot tr {
+    background: #f8f9fa;
+}
+
+.subscription-items-table tfoot th,
+.subscription-items-table tfoot td {
+    font-weight: 500;
+    color: #2c3338;
+}
+
+.subscription-items-table tfoot td {
+    text-align: right;
+}
+
+

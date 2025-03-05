@@ -47,6 +47,7 @@ function render_bluepay_form($atts) {
     // Form HTML
     ob_start();
     ?>
+<div class="bluepay-form-container">
 <form style="margin-top: 1rem; margin-bottom: 1rem;">
 	<h3>Order # <?php echo esc_html($order_id); ?></h3>
     <h3>Amount $<?php echo esc_html($order_total); ?> </h3>
@@ -430,6 +431,7 @@ function render_bluepay_form($atts) {
 
 <input type="submit" value="Make Payment">
 </form>
+</div>
     <?php
     return ob_get_clean();
 }
