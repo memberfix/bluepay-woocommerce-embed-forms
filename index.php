@@ -3,7 +3,7 @@
  * Plugin Name: BluePay Woocommerce Embed Forms
  * Plugin URI: https://memberfix.rocks
  * Description: Embed forms. Changing order status. Renewal form.
- * Version: 1.0.7.3
+ * Version: 1.0.7.4
  * Requires at least: 6.0
  * Requires PHP: 7.0
  * Author: Denys Melnychuk
@@ -182,7 +182,7 @@ function mfx_bluepay_deactivate() {
 register_deactivation_hook( __FILE__, 'mfx_bluepay_deactivate' );
 
 // Run updates when plugin is loaded (for existing installations)
-add_action('plugins_loaded', 'mfx_bluepay_run_updates');
+add_action('init', 'mfx_bluepay_run_updates');
 
 function mfx_bluepay_run_updates() {
     // Get current plugin version
@@ -191,7 +191,7 @@ function mfx_bluepay_run_updates() {
     // If this is a new installation or an update
     if (version_compare($current_version, '1.0.6.8', '<')) {
         // Update the Change Membership page with the renewal form shortcode
-        mfx_update_change_membership_page();
+        add_action('init', 'mfx_update_change_membership_page', 20);
         
         // Update the stored version number
         update_option('mfx_bluepay_version', '1.0.6.8');
@@ -200,7 +200,7 @@ function mfx_bluepay_run_updates() {
     // If this is an update to version 1.0.7.0 or newer
     if (version_compare($current_version, '1.0.7.0', '<')) {
         // Create all required pages for existing installations
-        mfx_create_required_pages();
+        add_action('init', 'mfx_create_required_pages', 20);
         
         // Update the stored version number
         update_option('mfx_bluepay_version', '1.0.7.0');

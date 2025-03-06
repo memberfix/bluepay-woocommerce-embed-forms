@@ -190,4 +190,30 @@ function bluepay_mfx_payment_gateway_init() {
     }
 
     add_filter('woocommerce_payment_gateways', 'add_bluepay_mfx_gateway');
+
+// Filter payment gateways on subscription pages
+add_filter('woocommerce_available_payment_gateways', 'bluepay_mfx_filter_payment_gateways', 20);
+
+/**
+ * Filter payment gateways to exclude BluePay on subscription change payment pages
+ * 
+ * @param array $available_gateways Array of available payment gateways
+ * @return array Modified array of payment gateways
+ */
+function bluepay_mfx_filter_payment_gateways($available_gateways) {
+    // Check if we're on a subscription change payment method page
+    if (
+        is_wc_endpoint_url('add-payment-method') || 
+        (isset($_GET['change_payment_method']) && !empty($_GET['change_payment_method'])) ||
+        (isset($_GET['wc-ajax']) && $_GET['wc-ajax'] === 'checkout' && 
+        isset($_GET['payment_method']) && $_GET['payment_method'] === 'bluepay_mfx')
+    ) {
+        // Remove the BluePay gateway
+        if (isset($available_gateways['bluepay_mfx'])) {
+            unset($available_gateways['bluepay_mfx']);
+        }
+    }
+    
+    return $available_gateways;
+}
 }
