@@ -148,12 +148,16 @@ function render_renewal_form() {
  * @return string 'A' for Group A, 'B' for Group B, or empty if not determined
  */
 function determine_subscription_group($subscription_id) {
+    error_log("DEBUG: Starting determine_subscription_group for subscription #$subscription_id");
+    
     if (!function_exists('wcs_get_subscription')) {
+        error_log("DEBUG: wcs_get_subscription function not available");
         return '';
     }
     
     $subscription = wcs_get_subscription($subscription_id);
     if (!$subscription) {
+        error_log("DEBUG: Subscription #$subscription_id not found");
         return '';
     }
     
@@ -165,6 +169,8 @@ function determine_subscription_group($subscription_id) {
         'supplier_product_id' => 12386
     ));
     
+    error_log("DEBUG: Renewal settings: " . print_r($renewal_settings, true));
+    
     // Group A product IDs
     $group_a_product_ids = array(
         $renewal_settings['membership_product_id'],
@@ -175,28 +181,39 @@ function determine_subscription_group($subscription_id) {
     // Group B product ID
     $group_b_product_id = $renewal_settings['supplier_product_id'];
     
+    error_log("DEBUG: Group A product IDs: " . implode(", ", $group_a_product_ids));
+    error_log("DEBUG: Group B product ID: $group_b_product_id");
+    
     // Check if subscription has any items
     $items = $subscription->get_items();
     if (empty($items)) {
+        error_log("DEBUG: No items found in subscription #$subscription_id");
         return '';
     }
+    
+    error_log("DEBUG: Found " . count($items) . " items in subscription");
     
     // Check each item to determine the group
     foreach ($items as $item) {
         $product_id = $item->get_product_id(); // This gets the parent product ID for variations
         $variation_id = $item->get_variation_id();
         
+        error_log("DEBUG: Checking item - Product ID: $product_id, Variation ID: $variation_id");
+        
         // If product is in Group A
         if (in_array($product_id, $group_a_product_ids)) {
+            error_log("DEBUG: Product $product_id is in Group A");
             return 'A';
         }
         
         // If product is in Group B
         if ($product_id == $group_b_product_id) {
+            error_log("DEBUG: Product $product_id is in Group B");
             return 'B';
         }
     }
     
+    error_log("DEBUG: Group not determined for subscription #$subscription_id");
     return ''; // Group not determined
 }
 
@@ -208,6 +225,8 @@ function determine_subscription_group($subscription_id) {
  * @return array Array of attribute values
  */
 function get_attribute_filter_options($parent_product_id, $attribute_name) {
+    error_log("DEBUG: Starting get_attribute_filter_options for product ID: $parent_product_id, attribute: $attribute_name");
+    
     global $wpdb;
     
     // Get attribute values for the specified parent product
@@ -231,11 +250,18 @@ function get_attribute_filter_options($parent_product_id, $attribute_name) {
         $query .= " ORDER BY pm.meta_value ASC";
     }
     
-    $attribute_values = $wpdb->get_col($wpdb->prepare(
+    $prepared_query = $wpdb->prepare(
         $query,
         'attribute_' . $attribute_name,
         $parent_product_id
-    ));
+    );
+    
+    error_log("DEBUG: Attribute filter query: $prepared_query");
+    
+    $attribute_values = $wpdb->get_col($prepared_query);
+    
+    error_log("DEBUG: Attribute values found: " . print_r($attribute_values, true));
+    error_log("DEBUG: SQL error (if any): " . $wpdb->last_error);
     
     return $attribute_values;
 }
@@ -247,6 +273,8 @@ function get_attribute_filter_options($parent_product_id, $attribute_name) {
  * @return array Array of filter options
  */
 function get_group_filter_options($group) {
+    error_log("DEBUG: Starting get_group_filter_options for group: $group");
+    
     // Get settings for product IDs
     $renewal_settings = get_option('mfx_bluepay_renewal_settings', array(
         'membership_product_id' => 12350,
@@ -256,19 +284,26 @@ function get_group_filter_options($group) {
         'revenue_source_product_id' => 12350
     ));
     
+    error_log("DEBUG: Renewal settings in filter options: " . print_r($renewal_settings, true));
+    
     $filters = array();
     
     if ($group == 'A') {
+        error_log("DEBUG: Processing Group A filters");
+        
         // Group A has filters for annual-revenue and plan
+        $annual_revenue_options = get_attribute_filter_options($renewal_settings['membership_product_id'], 'annual-revenue');
+        error_log("DEBUG: Annual revenue options: " . print_r($annual_revenue_options, true));
+        
         $filters['annual-revenue'] = array(
             'label' => 'Annual Revenue',
-            'options' => get_attribute_filter_options($renewal_settings['membership_product_id'], 'annual-revenue')
+            'options' => $annual_revenue_options
         );
         
         // Get plan values that exist in all three products (similar to product-filter-shortcode.php)
         global $wpdb;
-        $plan_values = $wpdb->get_col($wpdb->prepare(
-            "SELECT DISTINCT pm1.meta_value
+        
+        $query = "SELECT DISTINCT pm1.meta_value
             FROM {$wpdb->postmeta} pm1
             WHERE pm1.meta_key = 'attribute_plan'
             AND pm1.meta_value != ''
@@ -310,24 +345,41 @@ function get_group_filter_options($group) {
                     AND pmr4.meta_key = 'attribute_renewal'
                     AND pmr4.meta_value = 'Yes'
                 )
-            )",
+            )";
+            
+        $prepared_query = $wpdb->prepare($query,
             $renewal_settings['membership_product_id'],
             $renewal_settings['premium_service_product_id'],
             $renewal_settings['local_chapter_product_id']
-        ));
+        );
+        
+        error_log("DEBUG: Plan query: $prepared_query");
+        
+        $plan_values = $wpdb->get_col($prepared_query);
+        
+        error_log("DEBUG: Plan values found: " . print_r($plan_values, true));
+        error_log("DEBUG: SQL error (if any): " . $wpdb->last_error);
         
         $filters['plan'] = array(
             'label' => 'Plan',
             'options' => $plan_values
         );
     } else if ($group == 'B') {
+        error_log("DEBUG: Processing Group B filters");
+        
         // Group B only has filter for annual-revenue
+        $annual_revenue_options = get_attribute_filter_options($renewal_settings['supplier_product_id'], 'annual-revenue');
+        error_log("DEBUG: Annual revenue options for Group B: " . print_r($annual_revenue_options, true));
+        
         $filters['annual-revenue'] = array(
             'label' => 'Annual Revenue',
-            'options' => get_attribute_filter_options($renewal_settings['supplier_product_id'], 'annual-revenue')
+            'options' => $annual_revenue_options
         );
+    } else {
+        error_log("DEBUG: Unknown group: $group");
     }
     
+    error_log("DEBUG: Final filters: " . print_r($filters, true));
     return $filters;
 }
 
@@ -335,32 +387,43 @@ function get_group_filter_options($group) {
  * AJAX handler for getting subscription filters
  */
 function get_subscription_filters_ajax() {
+    error_log("DEBUG: Starting get_subscription_filters_ajax");
+    
     // Check nonce for security
     check_ajax_referer('mfx_renewal_form_nonce', 'nonce');
     
     $subscription_id = isset($_POST['subscription_id']) ? intval($_POST['subscription_id']) : 0;
+    error_log("DEBUG: Subscription ID from POST: $subscription_id");
     
     if (!$subscription_id) {
+        error_log("DEBUG: Invalid subscription ID");
         wp_send_json_error(array('message' => 'Invalid subscription ID'));
         return;
     }
     
     // Determine which group the subscription belongs to
+    error_log("DEBUG: Calling determine_subscription_group");
     $group = determine_subscription_group($subscription_id);
+    error_log("DEBUG: Group determined: $group");
     
     if (empty($group)) {
+        error_log("DEBUG: Could not determine subscription group");
         wp_send_json_error(array('message' => 'Could not determine subscription group'));
         return;
     }
     
     // Get filter options for the group
+    error_log("DEBUG: Calling get_group_filter_options for group: $group");
     $filters = get_group_filter_options($group);
+    error_log("DEBUG: Filters returned: " . print_r($filters, true));
     
     // Return the filters
-    wp_send_json_success(array(
+    $response = array(
         'group' => $group,
         'filters' => $filters
-    ));
+    );
+    error_log("DEBUG: Sending JSON response: " . print_r($response, true));
+    wp_send_json_success($response);
 }
 
 /**

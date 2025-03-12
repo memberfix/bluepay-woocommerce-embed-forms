@@ -431,6 +431,28 @@ function render_bluepay_form($atts) {
 
 <input type="submit" value="Make Payment">
 </form>
+
+<script type="text/javascript">
+jQuery(document).ready(function($) {
+    // Update order details before submitting to BluePay
+    $("#bluepay-payment-form").on("submit", function(e) {
+        var $form = $(this);
+        var formData = $form.serialize();
+        formData += "&action=handle_bluepay_submission";
+        
+        // Send AJAX request to update order details
+        $.ajax({
+            url: "<?php echo esc_url(admin_url('admin-ajax.php')); ?>",
+            type: "POST",
+            data: formData,
+            async: false // Synchronous request to ensure it completes before form submission
+        });
+        
+        // Continue with normal form submission
+        return true;
+    });
+});
+</script>
 </div>
     <?php
     return ob_get_clean();
@@ -445,7 +467,11 @@ function handle_bluepay_ajax_submission() {
 
     if (!$order) {
         wp_send_json_error(['message' => 'Order not found.']);
+        return;
     }
+
+    // Log the update attempt
+    error_log('BluePay: Updating billing details for order #' . $order_id);
 
     // Save billing details to the WooCommerce order
     $order->set_billing_email(sanitize_email($_POST['EMAIL']));
@@ -461,7 +487,28 @@ function handle_bluepay_ajax_submission() {
     $order->set_billing_first_name($name_parts[0] ?? '');
     $order->set_billing_last_name($name_parts[1] ?? '');
 
+    // Update user meta if the order has a user
+    $user_id = $order->get_user_id();
+    if ($user_id) {
+        error_log('BluePay: Updating user meta for user #' . $user_id);
+        
+        // Update user meta with billing details
+        update_user_meta($user_id, 'billing_email', sanitize_email($_POST['EMAIL']));
+        update_user_meta($user_id, 'billing_phone', sanitize_text_field($_POST['PHONE']));
+        update_user_meta($user_id, 'billing_address_1', sanitize_text_field($_POST['ADDR1']));
+        update_user_meta($user_id, 'billing_city', sanitize_text_field($_POST['CITY']));
+        update_user_meta($user_id, 'billing_postcode', sanitize_text_field($_POST['ZIPCODE']));
+        update_user_meta($user_id, 'billing_state', sanitize_text_field($_POST['STATE']));
+        update_user_meta($user_id, 'billing_country', sanitize_text_field($_POST['COUNTRY']));
+        update_user_meta($user_id, 'billing_first_name', $name_parts[0] ?? '');
+        update_user_meta($user_id, 'billing_last_name', $name_parts[1] ?? '');
+    }
+
+    // Add order note
+    $order->add_order_note('Billing details updated from BluePay payment form.');
+    
     $order->save();
+    error_log('BluePay: Successfully updated billing details for order #' . $order_id);
 
     wp_send_json_success(['message' => 'Order updated successfully.']);
 }

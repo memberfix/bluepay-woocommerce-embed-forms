@@ -3,6 +3,11 @@
 add_action('woocommerce_admin_order_data_after_order_details', 'add_guest_invoice_page_link_to_order_status', 10, 1);
 
 function add_guest_invoice_page_link_to_order_status($order) {
+    // Check if this is a subscription - if so, don't show the button
+    if (function_exists('wcs_is_subscription') && wcs_is_subscription($order)) {
+        return;
+    }
+    
     // Check if the order status is 'pending' or 'on-hold'
     if (in_array($order->get_status(), ['pending', 'on-hold'])) {
         // Get the base URL from settings
@@ -17,7 +22,7 @@ function add_guest_invoice_page_link_to_order_status($order) {
             'order_id' => $order->get_id(),
         ], $base_url));
 
-        // Add the hyperlink next to the status
-        echo '<a href="' . $invoice_url . '" class="button" target="_blank">Guest Invoice Page</a>';
+        // Add the hyperlink next to the status with 5px top margin
+        echo '<a href="' . $invoice_url . '" class="button" target="_blank" style="margin-top: 5px;">Guest Invoice Page</a>';
     }
 }
